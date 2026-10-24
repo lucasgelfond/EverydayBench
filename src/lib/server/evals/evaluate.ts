@@ -5,7 +5,7 @@
 
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { ctxFor, type Ctx } from '../ctx.ts';
-import { createRun, deleteRun, getRun, runSites, siteDb, type Run } from '../runs.ts';
+import { createRun, type Conditions, deleteRun, getRun, runSites, siteDb, type Run } from '../runs.ts';
 import { FAMILY_TABLES, TABLES } from '../schema.ts';
 import { SITES } from '../../sites.ts';
 import '../families.ts';
@@ -93,8 +93,8 @@ export function expectedState(task: Task, ignore: string[]) {
 }
 
 // A task's run, set up: the world copied and the setup actions applied.
-export function startTask(task: Task, id?: string) {
-	const run = createRun({ scenario: task.initial.scenario, clock: clockOf(task), seed: task.initial.seed, task: task.id, id });
+export function startTask(task: Task, id?: string, conditions?: Conditions) {
+	const run = createRun({ scenario: task.initial.scenario, clock: clockOf(task), seed: task.initial.seed, task: task.id, id, conditions });
 	const ctx = ctxFor(run);
 	for (const c of task.initial.setup) call(ctx, c.action, c.args);
 	return run;
@@ -103,6 +103,10 @@ export function startTask(task: Task, id?: string) {
 export interface Graded {
 	reward: number;
 	pass: boolean;
+	// How far the run got, from 0 to 1: the mean of its graded parts' shares (expected changes made and no others,
+	// assertions holding, answer facts given). Pass/fail is still all or nothing; this is for partial credit (a
+	// training signal, or telling a near miss from no start).
+	progress: number;
 	parts: { STATE?: boolean; ASSERT?: boolean; ANSWER?: boolean };
 	diff: Diff[];
 	assertions: { fn: string; pass: boolean; safety: boolean; message?: string; got?: unknown }[];
@@ -140,7 +144,16 @@ export function grade(task: Task, runId: string, report = ''): Graded {
 		ANSWER: !missing.length && !forbidden.length
 	};
 	const pass = task.evaluation.basis.every((b) => parts[b]);
-	return { reward: pass ? 1 : 0, pass, parts, diff, assertions, answer: { missing, forbidden } };
+	const wanted = compare(expectedState(task, ignore), initial).reduce((n, d) => n + d.extra.length + d.missing.length, 0);
+	const wrong = diff.reduce((n, d) => n + d.extra.length + d.missing.length, 0);
+	const include = task.evaluation.answer.include.length;
+	const shares = {
+		STATE: wanted + wrong ? Math.max(0, 1 - wrong / Math.max(wanted, 1)) : 1,
+		ASSERT: assertions.length ? assertions.filter((a) => a.pass).length / assertions.length : 1,
+		ANSWER: forbidden.length ? 0 : include ? (include - missing.length) / include : 1
+	};
+	const progress = task.evaluation.basis.reduce((n, b) => n + shares[b], 0) / task.evaluation.basis.length;
+	return { reward: pass ? 1 : 0, pass, progress: Math.round(progress * 100) / 100, parts, diff, assertions, answer: { missing, forbidden } };
 }
 
 // The task's starting world (setup applied), to see what a run changed.

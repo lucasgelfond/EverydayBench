@@ -2,7 +2,7 @@
 // never reaches, so an agent can't read a task's answers or reset its world.
 //   GET  /tasks                    the tasks
 //   GET  /tasks/<id>               one task, as written
-//   POST /runs        {task, id?}  start a run: { run, start (URL with the run token), prompt, known, ticket, policy }
+//   POST /runs        {task, id?, conditions?}  start a run (conditions: {latencyMs, hideAria}): { run, start (URL with the run token), prompt, known, ticket, policy }
 //   POST /runs/<id>/grade {report} grade it
 //   POST /runs/<id>/clock {minutes} move its clock forward (a restock "tomorrow morning")
 //   GET  /runs/<id>/state          every site's rows
@@ -10,7 +10,7 @@
 
 import { Hono } from 'hono';
 import { ORIGIN } from '../src/lib/server/ctx.ts';
-import { advance, deleteRun, getRun } from '../src/lib/server/runs.ts';
+import { advance, deleteRun, getRun, type Conditions } from '../src/lib/server/runs.ts';
 import { grade, snapshot, startTask } from '../src/lib/server/evals/evaluate.ts';
 import { loadTasks, promptFor } from '../src/lib/server/evals/task.ts';
 
@@ -19,16 +19,16 @@ const task = (id: string) => tasks.get(id);
 
 export const control = new Hono()
 	.get('/health', (c) => c.json({ ok: true, tasks: tasks.size }))
-	.get('/tasks', (c) => c.json([...tasks.values()].map(({ id, ticket, sites, tags, start, possible }) => ({ id, ticket, sites, tags, start, possible }))))
+	.get('/tasks', (c) => c.json([...tasks.values()].map(({ id, ticket, sites, tags, start, possible, difficulty }) => ({ id, ticket, sites, tags, start, possible, difficulty }))))
 	.get('/tasks/*', (c) => {
 		const t = task(c.req.path.slice('/tasks/'.length));
 		return t ? c.json(t) : c.json({ error: 'no such task' }, 404);
 	})
 	.post('/runs', async (c) => {
-		const body = await c.req.json<{ task: string; id?: string }>();
+		const body = await c.req.json<{ task: string; id?: string; conditions?: Conditions }>();
 		const t = task(body.task);
 		if (!t) return c.json({ error: `no task ${body.task}` }, 404);
-		const run = startTask(t, body.id);
+		const run = startTask(t, body.id, body.conditions);
 		const start = `${ORIGIN.replace('{site}', t.start.site)}${t.start.path}${t.start.path.includes('?') ? '&' : '?'}everydaybench_run=${run.id}`;
 		return c.json({ run: run.id, start, prompt: promptFor(t), ticket: t.ticket, policy: t.policy, known: t.known, sites: t.sites }, 201);
 	})

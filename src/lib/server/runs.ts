@@ -19,6 +19,14 @@ export interface Run {
 	clock: string;
 	createdAt: number;
 	offsetMs: number;
+	conditions?: Conditions;
+}
+
+// How a run's sites behave, beyond the task: every response this much slower, and pages without
+// aria-label (for agents that should work from pixels, or to see how much an agent leans on them).
+export interface Conditions {
+	latencyMs?: number;
+	hideAria?: boolean;
 }
 
 const dir = (id: string) => join(DATA, id);
@@ -41,10 +49,10 @@ export function getRun(id: string): Run | undefined {
 
 const save = (run: Run) => writeFileSync(file(run.id), JSON.stringify(run, null, 2));
 
-export function createRun({ scenario, clock, seed, task, id }: { scenario: string; clock: string; seed?: string; task?: string; id?: string }): Run {
+export function createRun({ scenario, clock, seed, task, id, conditions }: { scenario: string; clock: string; seed?: string; task?: string; id?: string; conditions?: Conditions }): Run {
 	const from = join(SEEDS, scenario);
 	if (!existsSync(from)) throw new Error(`no seeds for scenario ${scenario} (run the seed script)`);
-	const run: Run = { id: id ?? `r${Date.now().toString(36)}${code(4, Math.random())}`.toLowerCase(), scenario, task, seed: seed ?? scenario, clock, createdAt: Date.now(), offsetMs: 0 };
+	const run: Run = { id: id ?? `r${Date.now().toString(36)}${code(4, Math.random())}`.toLowerCase(), scenario, task, seed: seed ?? scenario, clock, createdAt: Date.now(), offsetMs: 0, ...(conditions && { conditions }) };
 	if (existsSync(dir(run.id))) deleteRun(run.id);
 	mkdirSync(dir(run.id), { recursive: true });
 	for (const f of readdirSync(from)) if (f.endsWith('.db')) copyFileSync(join(from, f), join(dir(run.id), f));

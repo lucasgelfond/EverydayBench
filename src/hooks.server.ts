@@ -26,8 +26,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.ctx = ctxFor(run);
 	event.locals.site = site;
 	event.locals.account = readSession(cookies, run.id, site.id);
+	const { latencyMs, hideAria } = run.conditions ?? {};
+	if (latencyMs) await new Promise((r) => setTimeout(r, latencyMs));
 	return resolve(event, {
-		transformPageChunk: ({ html }) =>
-			html.replace('%everydaybench.site%', site.id).replace('%everydaybench.style%', Object.entries(site.skin.vars).map(([k, v]) => `${k}:${v}`).join(';').replaceAll('"', '&quot;'))
+		transformPageChunk: ({ html }) => {
+			const page = html.replace('%everydaybench.site%', site.id).replace('%everydaybench.style%', Object.entries(site.skin.vars).map(([k, v]) => `${k}:${v}`).join(';').replaceAll('"', '&quot;'));
+			return hideAria ? withoutAria(page) : page;
+		}
 	});
 };
+
+// A page with no aria-label, as served and as it changes after (client-side rendering adds them back otherwise).
+const STRIP = `<script>(() => { const strip = (root) => { for (const el of root.querySelectorAll?.('[aria-label]') ?? []) el.removeAttribute('aria-label'); root.removeAttribute?.('aria-label'); }; strip(document); new MutationObserver((ms) => ms.forEach((m) => (m.type === 'attributes' ? m.target.removeAttribute('aria-label') : m.addedNodes.forEach(strip)))).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-label'] }); })();</script>`;
+const withoutAria = (html: string) => html.replace(/\s+aria-label="[^"]*"/g, '').replace('</head>', `${STRIP}</head>`);

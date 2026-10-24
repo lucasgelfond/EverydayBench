@@ -47,6 +47,8 @@ export const Task = z.object({
 	// What the agent knows that the ticket doesn't say: logins, cards to type. A harness can put these in a vault.
 	known: z.record(z.string(), z.string()).default({}),
 	possible: z.boolean().default(true),
+	// For splitting results (easy, medium, hard): how much reading, choosing and recovering the task takes.
+	difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
 	evaluation: z.object({
 		// One way to do the task, as actions: replayed on a fresh world, it gives the end state to expect. The agent
 		// doesn't have to take this path; it has to end in the same state. Empty means "change nothing".

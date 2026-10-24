@@ -45,6 +45,16 @@ describe('lumiscope-named-seats', () => {
 	});
 });
 
+test('progress: full for a pass, partial for a near miss, none for no start', () => {
+	const done = attempt('tickets/lumiscope-named-seats', (ctx) => call(ctx, 'tickets.purchase', buy(['E13', 'E14'])), (c) => `Done! ${c}`);
+	const unreported = attempt('tickets/lumiscope-named-seats', (ctx) => call(ctx, 'tickets.purchase', buy(['E13', 'E14'])), () => 'Done!');
+	const nothing = attempt('tickets/lumiscope-named-seats', () => undefined, () => 'Done!');
+	expect(done.progress).toBe(1);
+	expect(unreported.progress).toBeGreaterThan(0.5);
+	expect(unreported.progress).toBeLessThan(1);
+	expect(nothing.progress).toBeLessThan(unreported.progress);
+});
+
 describe('lumiscope-two-together', () => {
 	test('any two adjacent middle seats under the cap pass', () => {
 		expect(attempt('tickets/lumiscope-two-together', (ctx) => call(ctx, 'tickets.purchase', buy(['E16', 'E17'])), (c) => `E16 and E17, ${c}`).pass).toBe(true);
