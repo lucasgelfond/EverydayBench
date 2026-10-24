@@ -1,0 +1,16 @@
+{
+	"id": "tickets/showlark-named-seats",
+	"family": "tickets",
+	"sites": ["showlark", "orbelle", "mailmoss"],
+	"ticket": "On Showlark, buy seats F7 and F8 for tomorrow's 1:15 PM showing of The Last Lighthouse at Orbelle Eastgate Stadium 14, with the card saved on my Showlark account. Tell me the confirmation number and the total.",
+	"start": { "site": "showlark" },
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"known": { "showlark_email": "sam@mailmoss.test", "showlark_password": "popcorn-and-rain-17" },
+	"evaluation": {
+		"reference": [
+			{ "action": "tickets.purchase", "args": { "site": "showlark", "venue": "orbelle", "showtime": "orbelle-eastgate-last-lighthouse-20260315-1315", "seats": ["F7", "F8"], "email": "sam@mailmoss.test", "account": 1, "payment": { "kind": "saved", "card": 1 } } }
+		],
+		"answer": { "include": ["{code}", "$29.00"] }
+	},
+	"tags": ["aggregator", "seat-map", "saved-card", "sign-in"]
+}

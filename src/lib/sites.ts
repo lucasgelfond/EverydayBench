@@ -37,6 +37,54 @@ export interface Site {
 const font = (stack: string) => ({ '--font': stack });
 
 export const SITES: Record<string, Site> = {
+	showlark: {
+		id: 'showlark',
+		family: 'tickets',
+		kind: 'aggregator',
+		name: 'Showlark',
+		tagline: 'Showtimes and tickets at theaters near you',
+		skin: {
+			vars: { '--brand': '#e8590c', '--brand-ink': '#ffffff', '--bg': '#fff8f3', '--surface': '#ffffff', '--ink': '#1f1300', '--muted': '#7a6656', '--radius': '10px', ...font('ui-sans-serif, system-ui, sans-serif') },
+			words: { buy: 'Get tickets', continue: 'Continue', purchase: 'Complete purchase', findTheater: 'Find a theater', nowPlaying: 'Now playing' }
+		}
+	},
+	lumiscope: {
+		id: 'lumiscope',
+		family: 'tickets',
+		kind: 'chain',
+		name: 'Lumiscope Cinemas',
+		tagline: 'Big screens. Bigger nights.',
+		skin: {
+			vars: { '--brand': '#b0001e', '--brand-ink': '#ffffff', '--bg': '#0f0f12', '--surface': '#1b1b21', '--ink': '#f4f4f6', '--muted': '#a0a0ab', '--radius': '4px', ...font('"Helvetica Neue", Arial, sans-serif') },
+			words: { buy: 'Buy tickets', continue: 'Continue to checkout', purchase: 'Place order', findTheater: 'Find your theatre', nowPlaying: 'Now showing', seatsHeading: 'Choose your seats', screen: 'Screen' },
+			layout: { header: 'bar', showtimes: 'grid', screen: 'top' }
+		}
+	},
+	orbelle: {
+		id: 'orbelle',
+		family: 'tickets',
+		kind: 'chain',
+		name: 'Orbelle Theatres',
+		tagline: 'Movies, made an occasion.',
+		skin: {
+			vars: { '--brand': '#1d3fa6', '--brand-ink': '#ffffff', '--bg': '#f3f5fb', '--surface': '#ffffff', '--ink': '#0d1530', '--muted': '#5b6584', '--radius': '14px', ...font('Georgia, "Times New Roman", serif') },
+			words: { buy: 'Tickets', continue: 'Next', purchase: 'Pay now', findTheater: 'Theatres near you', nowPlaying: 'In theatres', seatsHeading: 'Select seats', screen: 'Screen this way' },
+			layout: { header: 'centered', showtimes: 'list', screen: 'top' }
+		}
+	},
+	brightreel: {
+		id: 'brightreel',
+		family: 'tickets',
+		kind: 'chain',
+		name: 'Brightreel Cinema',
+		tagline: 'Your seat is waiting.',
+		skin: {
+			vars: { '--brand': '#0f7b6c', '--brand-ink': '#ffffff', '--bg': '#f6fbfa', '--surface': '#ffffff', '--ink': '#06231f', '--muted': '#4f6b67', '--radius': '999px', ...font('Verdana, Geneva, sans-serif') },
+			words: { buy: 'Showtimes & tickets', continue: 'Review order', purchase: 'Confirm and pay', findTheater: 'Pick a location', nowPlaying: 'Playing now', seatsHeading: 'Pick your seats', screen: 'SCREEN' },
+			// The screen drawn at the bottom: row A is still nearest the screen, so it's the bottom row.
+			layout: { header: 'bar', showtimes: 'grid', screen: 'bottom' }
+		}
+	},
 	mailmoss: {
 		id: 'mailmoss',
 		family: 'mail',
