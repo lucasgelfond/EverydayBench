@@ -1,4 +1,4 @@
-// Every family's seeder, in order (later ones may read what earlier ones made). Families add theirs here.
-import type { Make } from '../seed.ts';
+// Every family's seeder, in order (later ones may read what earlier ones made).
+import { seedMail } from './mail.ts';
 
-export const SEEDERS: ((make: Make) => void)[] = [];
+export const SEEDERS = [seedMail];

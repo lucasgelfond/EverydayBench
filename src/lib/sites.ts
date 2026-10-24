@@ -37,6 +37,13 @@ export interface Site {
 const font = (stack: string) => ({ '--font': stack });
 
 export const SITES: Record<string, Site> = {
+	mailmoss: {
+		id: 'mailmoss',
+		family: 'mail',
+		name: 'Mailmoss',
+		tagline: 'Mail',
+		skin: { vars: { '--brand': '#2563eb', '--brand-ink': '#ffffff', '--bg': '#f7f8fa', '--surface': '#ffffff', '--ink': '#111827', '--muted': '#6b7280', '--radius': '8px', ...font('ui-sans-serif, system-ui, sans-serif') }, words: {} }
+	}
 };
 
 const DEFAULT_WORDS: Record<Word, string> = {

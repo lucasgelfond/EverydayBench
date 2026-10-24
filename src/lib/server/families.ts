@@ -1,2 +1,2 @@
-// Every family's actions and assertions, registered for grading. Families add an import here.
-export {};
+// Every family's actions and assertions, registered for grading.
+import './actions/mail.ts';
