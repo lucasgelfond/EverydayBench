@@ -1,0 +1,9 @@
+{
+	"sites": ["sweatlantis", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["STATE"],
+		"reference": [{ "action": "gym.book", "args": { "class": "harborview-20260315-1830", "account": 1 } }]
+	},
+	"tags": ["gym", "sign-in", "booking", "relative-date"]
+}

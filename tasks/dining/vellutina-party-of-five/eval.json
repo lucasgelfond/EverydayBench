@@ -1,0 +1,15 @@
+{
+	"sites": ["vellutina", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [
+			{
+				"action": "dining.reserve",
+				"args": { "site": "vellutina", "restaurant": "vellutina", "startsAt": "2026-03-19T19:30:00", "party": 5, "name": "Sam Rivera", "email": "sam@mailmoss.test" }
+			}
+		],
+		"ignore": ["reservations.name", "reservations.phone", "reservations.occasion", "reservations.notes", "messages.body"],
+		"answer": { "include": ["{code}"] }
+	},
+	"tags": ["reservation", "restaurant-site", "exact-time", "party-size"]
+}

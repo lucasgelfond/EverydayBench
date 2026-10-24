@@ -22,3 +22,19 @@ export function readSession(cookies: Cookies, run: string, site: string): number
 }
 
 export const clearSession = (cookies: Cookies, site: string) => cookies.delete(name(site), { path: '/' });
+
+// A form in progress (a multi-step application), signed in a cookie: never the database, so filling it in is not a
+// write a grader sees.
+export function writeDraft(cookies: Cookies, run: string, key: string, draft: Record<string, string>) {
+	const v = Buffer.from(JSON.stringify({ run, draft })).toString('base64url');
+	cookies.set(key, `${v}.${sign(v)}`, { path: '/', httpOnly: true, sameSite: 'lax', secure: false });
+}
+
+export function readDraft(cookies: Cookies, run: string, key: string): Record<string, string> {
+	const [v, sig] = cookies.get(key)?.split('.') ?? [];
+	if (!v || !sig || sig !== sign(v)) return {};
+	const { run: r, draft } = JSON.parse(Buffer.from(v, 'base64url').toString()) as { run: string; draft: Record<string, string> };
+	return r === run ? draft : {};
+}
+
+export const clearDraft = (cookies: Cookies, key: string) => cookies.delete(key, { path: '/' });

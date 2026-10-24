@@ -12,6 +12,11 @@
 	</div>
 </header>
 <div class="mx-auto flex max-w-5xl gap-6 px-4 py-4">
-	<nav aria-label="Folders" class="w-36 shrink-0 text-sm"><a href="/" class="block rounded-site bg-brand/10 px-3 py-2 font-semibold">Inbox{data.unread ? ` (${data.unread})` : ''}</a></nav>
+	<nav aria-label="Folders" class="w-36 shrink-0 space-y-1 text-sm">
+		<a href="/compose" class="btn mb-3 w-full">Compose</a>
+		{#each [['/', `Inbox${data.unread ? ` (${data.unread})` : ''}`], ['/sent', 'Sent'], ['/contacts', 'Contacts']] as [href, label] (href)}
+			<a {href} class="block rounded-site px-3 py-2 {page.url.pathname === href ? 'bg-brand/10 font-semibold' : 'hover:bg-current/5'}" aria-current={page.url.pathname === href ? 'page' : undefined}>{label}</a>
+		{/each}
+	</nav>
 	<main class="min-w-0 flex-1">{@render children()}</main>
 </div>

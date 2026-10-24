@@ -15,7 +15,7 @@ export default defineConfig({
 		launchOptions: { args: ['--host-resolver-rules=MAP *.everydaybench.test 127.0.0.1'] },
 		trace: 'retain-on-failure'
 	},
-	// A production build: no first-request compiles racing the tests, and the code as it runs. An already-running
+	// A production build (and fresh seeds): no first-request compiles racing the tests, and the code as it runs. An already-running
 	// server on the port (pnpm dev while working) is used instead.
-	webServer: { command: 'pnpm build && pnpm start', url: `http://127.0.0.1:${port}`, reuseExistingServer: true, timeout: 180_000 }
+	webServer: { command: 'pnpm build && pnpm seed && pnpm start', url: `http://127.0.0.1:${port}`, reuseExistingServer: true, timeout: 180_000 }
 });

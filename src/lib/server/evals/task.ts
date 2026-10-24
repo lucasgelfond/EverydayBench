@@ -54,7 +54,10 @@ export const Task = z.object({
 		// doesn't have to take this path; it has to end in the same state. Empty means "change nothing".
 		reference: z.array(Call).default([]),
 		assertions: z.array(Assertion).default([]),
-		answer: z.object({ include: z.array(z.string()).default([]), exclude: z.array(z.string()).default([]) }).default({ include: [], exclude: [] }),
+		// Facts the report must state (and mustn't); with `ordered`, the included ones in that order (times earliest first).
+		answer: z
+			.object({ include: z.array(z.string()).default([]), exclude: z.array(z.string()).default([]), ordered: z.boolean().default(false) })
+			.default({ include: [], exclude: [], ordered: false }),
 		// Columns a run may change freely, as "table.column" (or "site:table.column"), beyond the defaults.
 		ignore: z.array(z.string()).default([]),
 		basis: z.array(z.enum(['STATE', 'ASSERT', 'ANSWER'])).default(['STATE', 'ASSERT', 'ANSWER'])

@@ -1,0 +1,13 @@
+{
+	"sites": ["showlark", "lumiscope", "orbelle", "brightreel", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["STATE", "ASSERT", "ANSWER"],
+		"assertions": [
+			{ "fn": "report_says", "args": { "text": "Old Mill" } },
+			{ "fn": "report_says", "args": { "text": "Midtown" } }
+		],
+		"answer": { "include": ["11:45", "1:15", "4:00", "5:20", "6:45", "7:10", "8:30", "9:50"], "ordered": true }
+	},
+	"tags": ["showtimes", "aggregator", "read-only", "ordered-answer"]
+}

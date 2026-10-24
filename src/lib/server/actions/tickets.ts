@@ -234,5 +234,33 @@ defineAssertions({
 	total_at_most: (_ctx, a, { made }) => ordersAt(made).every((o) => Number(o.total_cents) <= Number(a.cents)),
 
 	// A password now signs in to a site.
-	password_works: (ctx, a) => Boolean(verify(ctx, String(a.site), String(a.email), String(a.password)))
+	password_works: (ctx, a) => Boolean(verify(ctx, String(a.site), String(a.email), String(a.password))),
+
+	// The report names two seats side by side that are open for a show ("E14 and E15", "E14-15", "row E, seats 14 and
+	// 15"), in these rows if given: a recommendation that's real.
+	reported_pair_open: (ctx, a, { report }) => {
+		const s = show(ctx, String(a.venue), String(a.showtime));
+		if (!s?.room) return false;
+		const named = reportedSeats(report);
+		return named.some((x, i) => {
+			const y = named[i + 1];
+			if (!y || x[0] !== y[0] || Number(y.slice(1)) !== Number(x.slice(1)) + 1 || s.room!.aisles.includes(Number(x.slice(1)))) return false;
+			if (a.rows && !(a.rows as string[]).includes(x[0]!)) return false;
+			return [x, y].every((seat) => seatExists(s.room!, seat) && !s.sold.includes(seat));
+		});
+	}
 });
+
+// Seats a report names, in order: "E14", "E14-15" and "row E, seats 14 and 15" all name E14 (and E15).
+function reportedSeats(report: string) {
+	const out: string[] = [];
+	const pattern = /\b[Rr]ow\s+([A-Z])\b[^.\n]{0,40}?\bseats?\s+(\d{1,2})(?:\s*(?:and|&|-|–|to|,)\s*(\d{1,2}))?|\b([A-Z])(\d{1,2})(?:\s*(?:-|–|to|and|&)\s*(?:[A-Z])?(\d{1,2}))?\b/g;
+	for (const m of report.matchAll(pattern)) {
+		const row = (m[1] ?? m[4])!.toUpperCase();
+		const first = Number(m[2] ?? m[5]);
+		const second = m[3] ?? m[6];
+		out.push(`${row}${first}`);
+		if (second) out.push(`${row}${Number(second)}`);
+	}
+	return out;
+}

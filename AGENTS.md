@@ -5,7 +5,7 @@ file is what an agent (or a person) changing the code needs to know.
 
 ## Layout
 
-- `src/lib/sites.ts` — every site: family (`tickets`, `mail`, `pay`), kind, name, skin (CSS variables, wording,
+- `src/lib/sites.ts` — every site: family (`tickets`, `mail`, `pay`, `shop`, `dining`), kind, name, skin (CSS variables, wording,
   layout variants). Sites are served by hostname (`src/hooks.ts` reroutes `lumiscope.everydaybench.test/x` to `routes/tickets/x`).
 - `src/lib/server/schema.ts` — the tables (Drizzle). Each site has its own SQLite database per run.
 - `src/lib/server/actions/` — **every write a site makes**, as typed functions. Pages call these; graders replay them.

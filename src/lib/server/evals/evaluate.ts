@@ -3,20 +3,23 @@
 // nothing passes only if nothing changed. Typed assertions cover what a state comparison can't say, and the agent's
 // report must state the facts the task asks for. The reward is the product of the parts in the task's basis.
 
+import { readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { ctxFor, type Ctx } from '../ctx.ts';
-import { createRun, type Conditions, deleteRun, getRun, runSites, siteDb, type Run } from '../runs.ts';
+import { createRun, type Conditions, deleteRun, getRun, runSites, SEEDS, siteDb, type Run } from '../runs.ts';
 import { FAMILY_TABLES, TABLES } from '../schema.ts';
 import { SITES } from '../../sites.ts';
 import '../families.ts';
 import { call } from './registry.ts';
-import { ASSERTIONS } from './assertions.ts';
+import { ASSERTIONS, CONFIRMATIONS } from './assertions.ts';
 import type { Task } from './task.ts';
 
 // Asking twice is harmless: another sign-in code, another reset link, and their emails are left out of the comparison
-// (what they unlock — a payment, a password change — is compared, and tasks check it worked).
+// (what they unlock — a payment, a password change — is compared, and tasks check it worked). So are the failures a
+// task arms (faults), which count down as they happen.
 const BENIGN = (site: string, table: string, row: Row) =>
-	(site === 'tallypay' && table === 'codes') || table === 'resets' || (table === 'messages' && (row.kind === 'code' || row.kind === 'reset'));
+	(site === 'tallypay' && table === 'codes') || table === 'resets' || table === 'faults' || (table === 'messages' && (row.kind === 'code' || row.kind === 'reset'));
 
 // Columns any run may change: times, row ids, and reading mail (marking it read).
 export const DEFAULT_IGNORE = ['*.created_at', '*.sent_at', '*.expires_at', '*.used_at', 'messages.id', 'messages.read', 'messages.starred', 'cards.id', 'accounts.id'];
@@ -115,16 +118,17 @@ export interface Graded {
 
 const norm = (s: string) => s.toLowerCase().replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim();
 
-// The orders a run made (new rows in orders tables), for answer placeholders like {code}.
-const newOrders = (diff: Diff[]) => diff.filter((d) => d.table === 'orders').flatMap((d) => d.extra);
+// The confirmations a run made (new rows in a family's confirmation tables: orders, reservations, stays), for answer
+// placeholders like {code}.
+const newOrders = (diff: Diff[]) => diff.filter((d) => CONFIRMATIONS.has(d.table)).flatMap((d) => d.extra);
 
 export function grade(task: Task, runId: string, report = ''): Graded {
 	const run = getRun(runId);
 	if (!run) throw new Error(`no run ${runId}`);
 	const ignore = [...DEFAULT_IGNORE, ...task.evaluation.ignore];
 	const actual = snapshot(run, ignore);
-	const diff = compare(actual, expectedState(task, ignore));
-	const initial = snapshotFresh(task, ignore);
+	const { expected, initial } = worlds(task, ignore);
+	const diff = compare(actual, expected);
 	const made = compare(actual, initial);
 	const ctx: Ctx = ctxFor(run);
 	const assertions = task.evaluation.assertions.map((a) => {
@@ -136,7 +140,14 @@ export function grade(task: Task, runId: string, report = ''): Graded {
 	const codes = newOrders(made).map((o) => String(o.code));
 	const fill = (s: string) => (s.includes('{code}') ? codes.map((c) => s.replaceAll('{code}', c)) : [s]);
 	const r = norm(report);
-	const missing = task.evaluation.answer.include.filter((s) => !fill(s).some((v) => v && r.includes(norm(v))));
+	// Ordered facts are looked for each after the one before.
+	let from = 0;
+	const missing = task.evaluation.answer.include.filter((s) => {
+		const at = Math.min(...fill(s).map((v) => (v ? r.indexOf(norm(v), task.evaluation.answer.ordered ? from : 0) : -1)).filter((i) => i >= 0));
+		if (!Number.isFinite(at)) return true;
+		if (task.evaluation.answer.ordered) from = at + 1;
+		return false;
+	});
 	const forbidden = task.evaluation.answer.exclude.filter((s) => fill(s).some((v) => v && r.includes(norm(v))));
 	const parts = {
 		STATE: diff.length === 0,
@@ -144,7 +155,7 @@ export function grade(task: Task, runId: string, report = ''): Graded {
 		ANSWER: !missing.length && !forbidden.length
 	};
 	const pass = task.evaluation.basis.every((b) => parts[b]);
-	const wanted = compare(expectedState(task, ignore), initial).reduce((n, d) => n + d.extra.length + d.missing.length, 0);
+	const wanted = compare(expected, initial).reduce((n, d) => n + d.extra.length + d.missing.length, 0);
 	const wrong = diff.reduce((n, d) => n + d.extra.length + d.missing.length, 0);
 	const include = task.evaluation.answer.include.length;
 	const shares = {
@@ -156,9 +167,17 @@ export function grade(task: Task, runId: string, report = ''): Graded {
 	return { reward: pass ? 1 : 0, pass, progress: Math.round(progress * 100) / 100, parts, diff, assertions, answer: { missing, forbidden } };
 }
 
-// The task's starting world (setup applied), to see what a run changed.
-function snapshotFresh(task: Task, ignore: string[]) {
-	return expectedState({ ...task, evaluation: { ...task.evaluation, reference: [] } }, ignore);
+// The world a task should end in, and the one it starts in (to see what a run changed). Both are the same every time
+// (the replay test checks), so they're made once per task, and again when the seeds change.
+const made = new Map<string, { key: string; expected: State; initial: State }>();
+function worlds(task: Task, ignore: string[]) {
+	const dir = join(SEEDS, task.initial.scenario);
+	const key = JSON.stringify([task, ignore, readdirSync(dir).map((f) => statSync(join(dir, f)).mtimeMs)]);
+	const hit = made.get(task.id);
+	if (hit?.key === key) return hit;
+	const fresh = { key, expected: expectedState(task, ignore), initial: expectedState({ ...task, evaluation: { ...task.evaluation, reference: [] } }, ignore) };
+	made.set(task.id, fresh);
+	return fresh;
 }
 
 // pass^k: the chance that k runs of a task all pass, from n runs with c passes (τ²-bench).

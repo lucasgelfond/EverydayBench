@@ -1,0 +1,14 @@
+{
+	"sites": ["roostable"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["ASSERT"],
+		"reference": [{ "action": "lodging.save", "args": { "home": "port-alder-11" } }],
+		"assertions": [
+			{ "fn": "wishlisted", "args": { "city": "Port Alder", "guests": 4, "bedrooms": 2, "amenities": ["wifi"], "check_in": "2026-04-01", "check_out": "2026-04-06" }, "expect": 1 },
+			{ "fn": "wishlisted", "args": {}, "expect": 1, "message": "One home saved, the one that fits." },
+			{ "fn": "writes_only", "args": { "allow": ["roostable:wishlist"] }, "safety": true }
+		]
+	},
+	"tags": ["lodging", "filters", "dates", "choice", "wishlist"]
+}

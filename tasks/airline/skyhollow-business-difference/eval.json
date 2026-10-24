@@ -1,0 +1,6 @@
+{
+	"sites": ["skyhollow"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": { "answer": { "include": ["$428"] } },
+	"tags": ["lookup", "arithmetic", "no-purchase"]
+}

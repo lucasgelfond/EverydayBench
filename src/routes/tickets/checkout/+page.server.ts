@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { accounts } from '#lib/server/schema.ts';
 import { showOf, venueOf } from '#lib/server/catalog.ts';
 import { FEE_CENTS, purchase, savedCards, type Payment } from '#lib/server/actions/tickets.ts';
+import { trip } from '#lib/server/actions/faults.ts';
 import { bySeat } from '#lib/time.ts';
 
 const parse = (url: URL) => ({ showtime: url.searchParams.get('showtime') ?? '', seats: (url.searchParams.get('seats') ?? '').split(',').filter(Boolean) });
@@ -37,8 +38,12 @@ export const actions = {
 		const payment: Payment = saved
 			? { kind: 'saved', card: Number(f.payment!.slice(6)) }
 			: { kind: 'typed', card: { number: f.number ?? '', exp: f.exp ?? '', cvc: f.cvc ?? '', name: f.name ?? '', zip: f.zip ?? '' } };
+		const values = { email: f.email ?? '', name: f.name ?? '', exp: f.exp ?? '', zip: f.zip ?? '' };
+		// Failures a task can arm: a saved card that declines, and an order that goes through but whose page errors.
+		if (payment.kind === 'saved' && trip(locals.ctx, site.id, 'decline')) return fail(402, { error: 'Your card was declined. Use a different card or contact your bank.', values });
 		const r = purchase(locals.ctx, { site: site.id, venue: venueOf(showtime), showtime, seats, email: f.email ?? '', account: locals.account, payment });
-		if (!r.ok) return fail(400, { error: r.error, values: { email: f.email ?? '', name: f.name ?? '', exp: f.exp ?? '', zip: f.zip ?? '' } });
+		if (!r.ok) return fail(400, { error: r.error, values });
+		if (trip(locals.ctx, site.id, 'error-after-charge')) return fail(502, { error: 'Something went wrong while confirming your order. Please try again.', values });
 		redirect(303, `/orders/${r.code}`);
 	}
 };

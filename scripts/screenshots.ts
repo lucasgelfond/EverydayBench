@@ -25,7 +25,23 @@ const shots: [string, string][] = [
 	['brightreel-seats', at('brightreel', '/showtimes/brightreel-harbor-last-lighthouse-20260315-1845')],
 	['owlbox', at('owlbox', '/theaters/owlbox?date=2026-03-15')],
 	['tallypay', pay.ok ? pay.url : at('tallypay', '/')],
-	['mailmoss', at('mailmoss', '/')]
+	['mailmoss', at('mailmoss', '/')],
+	['skyhollow-flights', at('skyhollow', '/flights?trip=one&from=IND&to=EWR&date=2026-03-20')],
+	['larkspan-flights', at('larkspan', '/flights?trip=one&from=AUS&to=PIT&date=2026-03-21')],
+	['skyhollow-seats', at('skyhollow', '/book/seats?out=skyhollow-sh226-20260319.economy&s0=9F')],
+	['kettlewick-search', at('kettlewick', '/search?q=headphones')],
+	['parcelpine-product', at('parcelpine', '/p/dutch-oven')],
+	['forkfly-home', at('forkfly', '/')],
+	['forkfly-restaurant', at('forkfly', '/r/ember-rotisserie')],
+	['tablenook-home', at('tablenook', '/')],
+	['tablenook-search', at('tablenook', '/search?date=2026-03-20&time=21:00&party=6&area=Midtown')],
+	['seatwell-search', at('seatwell', '/search?date=2026-03-14&time=19:00&party=2&area=Riverside')],
+	['vellutina-reserve', at('vellutina', '/reserve?party=5&date=2026-03-19')],
+	['mailmoss-contacts', at('mailmoss', '/contacts')],
+	['daybrella', at('daybrella', '/')],
+	['roostable-search', at('roostable', '/?city=Port+Alder&checkIn=2026-04-01&checkOut=2026-04-06&guests=4&bedrooms=2')],
+	['roostable-home', at('roostable', '/homes/kestrel-bay-6?checkIn=2026-03-20&checkOut=2026-03-22&guests=2')],
+	['sweatlantis-schedule', at('sweatlantis', '/schedule?location=eastgate&date=2026-03-15')]
 ];
 
 const browser = await chromium.launch({ args: ['--host-resolver-rules=MAP *.everydaybench.test 127.0.0.1'] });

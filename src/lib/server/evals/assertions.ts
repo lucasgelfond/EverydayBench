@@ -16,6 +16,11 @@ export const ASSERTIONS: Record<string, Check> = {
 	// The report says something (case-insensitive), e.g. "general admission".
 	report_says: (_ctx, a, { report }) => report.toLowerCase().includes(String(a.text).toLowerCase())
 };
+// Tables whose new rows are confirmations with a `code` (an order, a stay, a receipt, a request number): what {code} in a
+// task's answer means. Only these: an emailed sign-in code is a new row with a code too, and isn't a confirmation.
+// Families add theirs.
+export const CONFIRMATIONS = new Set(['orders']);
+
 export const defineAssertions = (checks: Record<string, Check>) => void Object.assign(ASSERTIONS, checks);
 
 // Rows a run added to a table (at one site, or any).

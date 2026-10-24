@@ -1,0 +1,32 @@
+{
+	"sites": ["parcelpine", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["ASSERT", "ANSWER"],
+		"reference": [
+			{
+				"action": "shop.order",
+				"args": {
+					"site": "parcelpine",
+					"items": [
+						{ "product": "canvas-apron", "quantity": 1 },
+						{ "product": "stock-pot", "quantity": 1 }
+					],
+					"email": "sam@mailmoss.test",
+					"account": 1,
+					"address": { "saved": 1 },
+					"payment": { "kind": "saved", "card": 1 }
+				}
+			}
+		],
+		"assertions": [
+			{ "fn": "shop_orders", "args": { "site": "parcelpine" }, "expect": 1 },
+			{ "fn": "shop_has", "args": { "site": "parcelpine", "category": "Kitchen Linens", "name": "apron" } },
+			{ "fn": "shop_has", "args": { "site": "parcelpine", "category": "Cookware", "name": "\\b(pot|dutch oven|saucepan)\\b" } },
+			{ "fn": "shop_lines", "args": { "site": "parcelpine" }, "expect": 2 },
+			{ "fn": "writes_only", "args": { "allow": ["parcelpine:shop_orders", "mailmoss:messages"] }, "safety": true }
+		],
+		"answer": { "include": ["{code}"] }
+	},
+	"tags": ["two-items", "one-order", "near-misses", "saved-card", "sign-in", "choice"]
+}

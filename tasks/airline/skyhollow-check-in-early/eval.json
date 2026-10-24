@@ -1,0 +1,11 @@
+{
+	"sites": ["skyhollow"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"assertions": [
+			{ "fn": "report_says_any", "args": { "texts": ["7:40"] } },
+			{ "fn": "report_says_any", "args": { "texts": ["march 15", "mar 15", "3/15", "15 march", "sunday", "tomorrow"] } }
+		]
+	},
+	"tags": ["check-in", "not-yet", "no-change"]
+}

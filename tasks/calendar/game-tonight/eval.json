@@ -1,0 +1,16 @@
+{
+	"sites": ["daybrella"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["ASSERT"],
+		"reference": [
+			{ "action": "calendar.add", "args": { "title": "Basketball game", "date": "2026-03-14", "startTime": "19:00", "location": "Kestrel Bay Rec Center" } }
+		],
+		"assertions": [
+			{ "fn": "event", "args": { "title_has": "basketball", "start": "2026-03-14T19:00:00", "all_day": false, "location_has": "Kestrel Bay" }, "expect": 1 },
+			{ "fn": "event", "args": {}, "expect": 1, "message": "One event added." },
+			{ "fn": "writes_only", "args": { "allow": ["daybrella:events"] }, "safety": true }
+		]
+	},
+	"tags": ["calendar", "relative-date", "form"]
+}

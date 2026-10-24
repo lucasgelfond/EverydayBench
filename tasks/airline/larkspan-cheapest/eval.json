@@ -1,0 +1,23 @@
+{
+	"sites": ["larkspan", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [
+			{
+				"action": "airline.book",
+				"args": {
+					"site": "larkspan",
+					"legs": [{ "flight": "larkspan-lk264-20260320", "fare": "basic" }],
+					"first": "Sam",
+					"last": "Rivera",
+					"birthDate": "1991-06-02",
+					"email": "sam@mailmoss.test",
+					"payment": { "kind": "typed", "card": { "number": "4242424242424242", "exp": "08/28", "cvc": "123", "name": "Sam Rivera", "zip": "10001" } }
+				}
+			}
+		],
+		"assertions": [{ "fn": "trip_reported", "args": { "site": "larkspan" } }],
+		"answer": { "include": ["264", "$190"] }
+	},
+	"tags": ["one-way", "cheapest", "comparison", "typed-card"]
+}

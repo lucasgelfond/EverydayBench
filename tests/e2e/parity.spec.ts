@@ -35,6 +35,7 @@ for (const site of ['lumiscope', 'orbelle', 'brightreel']) {
 			await fill(page.getByRole('search').getByRole('textbox'), theater.area);
 			await click(page.getByRole('link', { name: new RegExp(theater.name) }));
 			await click(page.getByRole('link', { name: /Tomorrow/ }));
+			await expect(page.getByRole('link', { name: /Tomorrow/ })).toHaveAttribute('aria-current', 'date');
 			const film = page.getByRole('article').filter({ has: page.getByRole('heading', { name: evening.film.title, exact: true }) });
 			await click(film.getByRole('link', { name: new RegExp(`^${clock(evening.s.startsAt)}`) }).first());
 			for (const seat of pair!) await click(page.getByRole('link', { name: `Row ${seat[0]}, seat ${seat.slice(1)}, available` }));

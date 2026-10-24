@@ -1,0 +1,12 @@
+{
+	"sites": ["sweatlantis"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["STATE", "ANSWER"],
+		"answer": {
+			"include": ["7:00 AM", "9:30 AM", "4:00 PM", "Ines Okoro", "Marcus Bell"],
+			"exclude": ["Dana Whitlock"]
+		}
+	},
+	"tags": ["gym", "schedule", "read-only", "list-all", "filter"]
+}

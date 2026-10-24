@@ -1,0 +1,7 @@
+{
+	"sites": ["larkspan", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"possible": false,
+	"evaluation": { "answer": { "include": ["expired"] } },
+	"tags": ["impossible", "saved-card", "sign-in", "report-failure"]
+}

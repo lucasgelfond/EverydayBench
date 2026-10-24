@@ -1,0 +1,14 @@
+{
+	"sites": ["brightreel", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["STATE", "ASSERT"],
+		"assertions": [
+			{
+				"fn": "reported_pair_open",
+				"args": { "venue": "brightreel", "showtime": "brightreel-oldmill-velocity-nine-20260315-1910", "rows": ["C", "D", "E", "F", "G", "H", "I", "J", "K", "L"] }
+			}
+		]
+	},
+	"tags": ["seat-map", "read-only", "screen-at-bottom", "judgment"]
+}

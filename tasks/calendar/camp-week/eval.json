@@ -1,0 +1,16 @@
+{
+	"sites": ["daybrella"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["ASSERT"],
+		"reference": [
+			{ "action": "calendar.add", "args": { "title": "Math camp", "date": "2026-03-16", "allDay": true, "endDate": "2026-03-20", "location": "Alder Point" } }
+		],
+		"assertions": [
+			{ "fn": "event", "args": { "title_has": "camp", "all_day": true, "start": "2026-03-16", "end": "2026-03-20", "location_has": "Alder Point" }, "expect": 1 },
+			{ "fn": "event", "args": {}, "expect": 1, "message": "One event over the five days, not one a day." },
+			{ "fn": "writes_only", "args": { "allow": ["daybrella:events"] }, "safety": true }
+		]
+	},
+	"tags": ["calendar", "all-day", "multi-day", "relative-date", "form"]
+}

@@ -11,9 +11,12 @@ test('Lumiscope: sign in, find the theater, pick E13 and E14, pay with the saved
 	await t.fill(page.getByLabel('Find your theatre'), 'Harbor');
 	await t.click(page.getByRole('link', { name: /Lumiscope Harborview 8/ }));
 	await t.click(page.getByRole('link', { name: /Tomorrow/ }));
+	await expect(page.getByRole('link', { name: /Tomorrow/ })).toHaveAttribute('aria-current', 'date');
 	const film = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'The Last Lighthouse' }) });
 	await t.click(film.getByRole('link', { name: /^6:45 PM/ }));
 	await t.click(page.getByRole('link', { name: 'Row E, seat 13, available' }));
+	// Each pick loads a new page: wait for it, or the next click lands on the old one.
+	await expect(page.getByText('1 seat: E13')).toBeVisible();
 	await t.click(page.getByRole('link', { name: 'Row E, seat 14, available' }));
 	await expect(page.getByText('2 seats: E13, E14')).toBeVisible();
 	await t.click(page.getByRole('link', { name: 'Continue to checkout' }));
@@ -35,10 +38,13 @@ test('Showlark: sell a Orbelle theater’s seats with Showlark’s saved card', 
 	await t.fill(page.getByLabel('Find a theater'), 'Eastgate');
 	await t.click(page.getByRole('link', { name: /Orbelle Eastgate Stadium 14/ }));
 	await t.click(page.getByRole('link', { name: /Tomorrow/ }));
+	await expect(page.getByRole('link', { name: /Tomorrow/ })).toHaveAttribute('aria-current', 'date');
 	const film = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'The Last Lighthouse' }) });
 	await t.click(film.getByRole('link', { name: /^1:15 PM/ }));
 	await t.click(page.getByRole('link', { name: 'Row F, seat 7, available' }));
+	await expect(page.getByText('1 seat: F7')).toBeVisible();
 	await t.click(page.getByRole('link', { name: 'Row F, seat 8, available' }));
+	await expect(page.getByText('2 seats: F7, F8')).toBeVisible();
 	await t.click(page.getByRole('link', { name: 'Continue' }));
 	await t.click(page.getByRole('button', { name: /Complete purchase · \$29\.00/ }));
 	const code = (await page.locator('strong.font-mono').textContent())!;
@@ -72,6 +78,7 @@ test('The Owlbox: general admission through Tallypay, paid with Express and the 
 	const t = begin(page, 'tickets/owlbox-express');
 	await t.go('owlbox');
 	await t.click(page.getByRole('link', { name: /Tomorrow/ }));
+	await expect(page.getByRole('link', { name: /Tomorrow/ })).toHaveAttribute('aria-current', 'date');
 	const film = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Pinewood' }) });
 	await t.click(film.getByRole('link', { name: /^7:15 PM/ }));
 	await t.select(page.getByLabel('Tickets', { exact: true }), '2');
