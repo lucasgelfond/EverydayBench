@@ -1,5 +1,6 @@
-import { error } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { showOf } from '#lib/server/catalog.ts';
+import { startCheckout } from '#lib/server/actions/pay.ts';
 import { MAX_SEATS } from '#lib/server/actions/tickets.ts';
 
 export const load = ({ locals, params, url }) => {
@@ -17,3 +18,12 @@ export const load = ({ locals, params, url }) => {
 	};
 };
 
+export const actions = {
+	// General admission: a hosted checkout for the tickets.
+	checkout: async ({ locals, params, request }) => {
+		const form = await request.formData();
+		const started = startCheckout(locals.ctx, { merchant: locals.site!.id, showtime: params.id, quantity: Number(form.get('quantity')), email: String(form.get('email') ?? '') });
+		if (!started.ok) return fail(400, { error: started.error });
+		redirect(303, started.url, { external: true });
+	}
+};

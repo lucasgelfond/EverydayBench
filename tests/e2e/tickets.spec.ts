@@ -68,3 +68,27 @@ test('Orbelle: reset a password from the emailed link, then sign in with it', as
 	expect(t.grade('Reset and signed in.').pass).toBe(true);
 });
 
+test('The Owlbox: general admission through Tallypay, paid with Express and the emailed code', async ({ page }) => {
+	const t = begin(page, 'tickets/owlbox-express');
+	await t.go('owlbox');
+	await t.click(page.getByRole('link', { name: /Tomorrow/ }));
+	const film = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Pinewood' }) });
+	await t.click(film.getByRole('link', { name: /^7:15 PM/ }));
+	await t.select(page.getByLabel('Tickets', { exact: true }), '2');
+	await t.fill(page.getByLabel('Email for your tickets'), 'sam@mailmoss.test');
+	await t.click(page.getByRole('button', { name: 'Checkout' }));
+	await expect(page).toHaveURL(/tallypay\.everydaybench\.test/);
+	await t.click(page.getByRole('link', { name: 'Tallypay Express' }));
+	await t.click(page.getByRole('button', { name: 'Send code' }));
+	await expect(page.getByRole('status')).toContainText('sam@mailmoss.test');
+	const checkout = page.url();
+	await t.go('mailmoss');
+	await t.click(page.getByRole('link', { name: /is your Tallypay code/ }));
+	const otp = (await page.getByRole('heading').first().textContent())!.slice(0, 6);
+	await page.goto(checkout);
+	await t.fill(page.getByLabel('Verification code'), otp);
+	await t.click(page.getByRole('button', { name: /^Pay \$/ }));
+	await expect(page).toHaveURL(/owlbox\.everydaybench\.test:\d+\/orders\//);
+	const code = (await page.locator('strong.font-mono').textContent())!;
+	expect(t.grade(`Confirmation ${code}`).pass).toBe(true);
+});

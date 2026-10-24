@@ -85,12 +85,30 @@ export const SITES: Record<string, Site> = {
 			layout: { header: 'bar', showtimes: 'grid', screen: 'bottom' }
 		}
 	},
+	owlbox: {
+		id: 'owlbox',
+		family: 'tickets',
+		kind: 'arthouse',
+		name: 'The Owlbox',
+		tagline: 'Independent, repertory and first-run cinema since 1971.',
+		skin: {
+			vars: { '--brand': '#3b2f2f', '--brand-ink': '#f6efe3', '--bg': '#f6efe3', '--surface': '#fffaf1', '--ink': '#2a2020', '--muted': '#7d6b5d', '--radius': '0px', ...font('"Iowan Old Style", Palatino, Georgia, serif') },
+			words: { buy: 'Tickets', continue: 'Checkout', nowPlaying: 'This week' }
+		}
+	},
 	mailmoss: {
 		id: 'mailmoss',
 		family: 'mail',
 		name: 'Mailmoss',
 		tagline: 'Mail',
 		skin: { vars: { '--brand': '#2563eb', '--brand-ink': '#ffffff', '--bg': '#f7f8fa', '--surface': '#ffffff', '--ink': '#111827', '--muted': '#6b7280', '--radius': '8px', ...font('ui-sans-serif, system-ui, sans-serif') }, words: {} }
+	},
+	tallypay: {
+		id: 'tallypay',
+		family: 'pay',
+		name: 'Tallypay',
+		tagline: 'Secure checkout',
+		skin: { vars: { '--brand': '#5b4cdb', '--brand-ink': '#ffffff', '--bg': '#f6f7fb', '--surface': '#ffffff', '--ink': '#1a1b25', '--muted': '#697386', '--radius': '6px', ...font('ui-sans-serif, system-ui, sans-serif') }, words: {} }
 	}
 };
 

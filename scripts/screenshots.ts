@@ -1,0 +1,45 @@
+// Screenshots of every site for the README (public/screenshots/), from a fresh run, against a running server.
+//   pnpm dev (or pnpm start), then: node scripts/screenshots.ts
+import { mkdirSync } from 'node:fs';
+import { chromium } from '@playwright/test';
+import { createRun, deleteRun } from '../src/lib/server/runs.ts';
+import { ORIGIN, ctxFor } from '../src/lib/server/ctx.ts';
+import { purchase } from '../src/lib/server/actions/tickets.ts';
+import { startCheckout } from '../src/lib/server/actions/pay.ts';
+
+const OUT = 'public/screenshots';
+mkdirSync(OUT, { recursive: true });
+const run = createRun({ scenario: 'tickets-v1', clock: '2026-03-14T10:00:00', id: 'screenshots' });
+const ctx = ctxFor(run);
+// Something in the inbox, and a checkout to show.
+purchase(ctx, { site: 'showlark', venue: 'orbelle', showtime: 'orbelle-eastgate-last-lighthouse-20260315-1315', seats: ['F7', 'F8'], email: 'sam@mailmoss.test', account: 1, payment: { kind: 'saved', card: 1 } });
+const pay = startCheckout(ctx, { merchant: 'owlbox', showtime: 'owlbox-pinewood-20260315-1915', quantity: 2, email: 'sam@mailmoss.test' });
+const at = (site: string, path: string) => `${ORIGIN.replace('{site}', site)}${path}`;
+const shots: [string, string][] = [
+	['showlark-home', at('showlark', '/')],
+	['showlark-movie', at('showlark', '/movies/pinewood?date=2026-03-15')],
+	['lumiscope-theater', at('lumiscope', '/theaters/lumiscope-harborview?date=2026-03-15')],
+	['lumiscope-seats', at('lumiscope', '/showtimes/lumiscope-harborview-last-lighthouse-20260315-1845?seats=E13,E14')],
+	['lumiscope-checkout', at('lumiscope', '/checkout?showtime=lumiscope-harborview-last-lighthouse-20260315-1845&seats=E13,E14')],
+	['orbelle-theater', at('orbelle', '/theaters/orbelle-eastgate?date=2026-03-15')],
+	['brightreel-seats', at('brightreel', '/showtimes/brightreel-harbor-last-lighthouse-20260315-1845')],
+	['owlbox', at('owlbox', '/theaters/owlbox?date=2026-03-15')],
+	['tallypay', pay.ok ? pay.url : at('tallypay', '/')],
+	['mailmoss', at('mailmoss', '/')]
+];
+
+const browser = await chromium.launch({ args: ['--host-resolver-rules=MAP *.everydaybench.test 127.0.0.1'] });
+const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+try {
+	await page.goto(`${at('mailmoss', '/')}?everydaybench_run=${run.id}`);
+	for (const [name, url] of shots) {
+		const res = await page.goto(url);
+		if (!res?.ok()) throw new Error(`${name}: ${res?.status()} at ${url}`);
+		await page.waitForLoadState('networkidle');
+		await page.screenshot({ path: `${OUT}/${name}.png` });
+		console.log(`${OUT}/${name}.png`);
+	}
+} finally {
+	await browser.close();
+	deleteRun(run.id);
+}

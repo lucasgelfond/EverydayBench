@@ -1,7 +1,7 @@
 <script lang="ts">
 	import SeatMap from '#lib/ui/SeatMap.svelte';
 	import { bySeat, clock, longDate, money } from '#lib/time.ts';
-	let { data } = $props();
+	let { data, form } = $props();
 	const date = $derived(data.show.startsAt.slice(0, 10));
 	const seatQuery = (seats: string[]) => (seats.length ? `?seats=${seats.join(',')}` : '?');
 </script>
@@ -29,4 +29,17 @@
 			<span class="btn opacity-40" aria-disabled="true">{data.words.continue}</span>
 		{/if}
 	</section>
+{:else}
+	<form method="POST" action="?/checkout" class="card max-w-md space-y-4">
+		<p>General admission: seating is first come, first served. {money(data.show.priceCents)} per ticket.{#if data.show.left !== null && data.show.left < 20}<strong> Only {data.show.left} left.</strong>{/if}</p>
+		<label class="label" for="quantity">Tickets</label>
+		<div>
+			<select id="quantity" name="quantity" class="field">
+				{#each Array.from({ length: Math.min(10, data.show.left ?? 10) }, (_, i) => i + 1) as n (n)}<option value={n}>{n}</option>{/each}
+			</select>
+		</div>
+		<label class="label">Email for your tickets <input class="field" name="email" type="email" autocomplete="email" required /></label>
+		{#if form?.error}<p class="text-sm font-semibold text-red-600" role="alert">{form.error}</p>{/if}
+		<button class="btn">{data.words.continue}</button>
+	</form>
 {/if}
