@@ -1,0 +1,22 @@
+{
+	"sites": ["lumiscope", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [
+			{
+				"action": "tickets.purchase",
+				"args": {
+					"site": "lumiscope",
+					"showtime": "lumiscope-harborview-last-lighthouse-20260315-1845",
+					"seats": ["E13", "E14"],
+					"email": "sam@mailmoss.test",
+					"account": 1,
+					"payment": { "kind": "saved", "card": 1 }
+				}
+			}
+		],
+		"assertions": [{ "fn": "order", "args": { "site": "lumiscope", "field": "payment" }, "expect": "saved" }],
+		"answer": { "include": ["{code}"] }
+	},
+	"tags": ["seat-map", "saved-card", "sign-in"]
+}

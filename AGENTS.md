@@ -14,7 +14,7 @@ file is what an agent (or a person) changing the code needs to know.
   (`registry.ts`), assertions (`assertions.ts`), grading (`evaluate.ts`).
 - `src/routes/<family>/` — pages. `src/lib/ui/` — shared components (seat map, date strip, card fields, search).
 - `scripts/seed.ts` — builds `seeds/<scenario>/*.db` from code. `control/` — the harness API (Hono). `server.ts` —
-  production entry. `tasks/` — task JSON. `tests/unit` (Vitest), `tests/e2e` (Playwright).
+  production entry. `tasks/` — tasks (`prompt.md` + `eval.json` each). `tests/unit` (Vitest), `tests/e2e` (Playwright).
 
 ## Rules that keep the benchmark honest
 
@@ -34,8 +34,10 @@ file is what an agent (or a person) changing the code needs to know.
 
 ## Adding a task
 
-1. Write `tasks/<family>/<name>.json` (id must match the path). Give the ticket in the owner's words, the start site, the
-   scenario and clock, a reference solution (actions from `registry.ts`), assertions and required answer facts.
+1. Make `tasks/<family>/<name>/` with two files. `prompt.md` is what the agent gets: front matter (`start`, `policy`,
+   `known`) and the ticket in the owner's words; it can be reworded without touching grading. `eval.json` is the
+   deterministic part: `sites`, the scenario and clock (`initial`), a reference solution (actions from `registry.ts`),
+   assertions and required answer facts (`evaluation`), `tags`.
 2. Pick concrete things from the seeds (query `seeds/<scenario>/*.db`) so the task has one right outcome, or grade an
    open choice with assertions (`basis: ["ASSERT", "ANSWER"]`, plus `writes_only`).
 3. `pnpm test` checks the reference replays deterministically. Add a golden path to `tests/e2e/` that does the task

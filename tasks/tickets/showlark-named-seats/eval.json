@@ -1,0 +1,22 @@
+{
+	"sites": ["showlark", "orbelle", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [
+			{
+				"action": "tickets.purchase",
+				"args": {
+					"site": "showlark",
+					"venue": "orbelle",
+					"showtime": "orbelle-eastgate-last-lighthouse-20260315-1315",
+					"seats": ["F7", "F8"],
+					"email": "sam@mailmoss.test",
+					"account": 1,
+					"payment": { "kind": "saved", "card": 1 }
+				}
+			}
+		],
+		"answer": { "include": ["{code}", "$29.00"] }
+	},
+	"tags": ["aggregator", "seat-map", "saved-card", "sign-in"]
+}

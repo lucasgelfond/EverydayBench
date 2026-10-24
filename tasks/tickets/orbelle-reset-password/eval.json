@@ -1,0 +1,19 @@
+{
+	"sites": ["orbelle", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [
+			{
+				"action": "tickets.resetPassword",
+				"args": { "site": "orbelle", "email": "sam@mailmoss.test", "password": "river-lights-2026" }
+			}
+		],
+		"assertions": [
+			{
+				"fn": "password_works",
+				"args": { "site": "orbelle", "email": "sam@mailmoss.test", "password": "river-lights-2026" }
+			}
+		]
+	},
+	"tags": ["password-reset", "email-link", "cross-site"]
+}

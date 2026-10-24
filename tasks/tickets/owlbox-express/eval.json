@@ -1,0 +1,21 @@
+{
+	"sites": ["owlbox", "tallypay", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [
+			{
+				"action": "pay.checkout",
+				"args": {
+					"merchant": "owlbox",
+					"showtime": "owlbox-pinewood-20260315-1915",
+					"quantity": 2,
+					"email": "sam@mailmoss.test",
+					"express": "sam@mailmoss.test"
+				}
+			}
+		],
+		"assertions": [{ "fn": "order", "args": { "site": "owlbox", "field": "card_last4" }, "expect": "4444" }],
+		"answer": { "include": ["{code}"] }
+	},
+	"tags": ["general-admission", "hosted-checkout", "2fa-code", "saved-card", "cross-site"]
+}

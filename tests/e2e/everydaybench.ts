@@ -6,7 +6,7 @@ import { loadTasks } from '../../src/lib/server/evals/task.ts';
 import { grade, startTask } from '../../src/lib/server/evals/evaluate.ts';
 
 export const tasks = loadTasks();
-export const origin = (site: string) => `http://${site}.everydaybench.test:8700`;
+export const origin = (site: string) => `http://${site}.everydaybench.test:${process.env.PORT ?? 8700}`;
 
 export function begin(page: Page, id: string) {
 	const task = tasks.get(id);

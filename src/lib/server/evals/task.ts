@@ -1,10 +1,17 @@
 // A task: what the agent is asked (`ticket`), where it starts, the world it starts in, and how it's graded. Shaped
 // after τ²-bench (end state, typed assertions, required facts, a reward that's the product of its parts) with
 // WebArena's fields (sites, start page, possible).
+//
+// On disk a task is a folder, tasks/<family>/<name>/, in two parts:
+// - prompt.md: what the agent is given. Front matter (`start`: a site, or a site and path like "orbelle/account";
+//   `policy`; `known`), then the ticket in the owner's words. Reword it freely; grading doesn't read it.
+// - eval.json: the rest, deterministic: the world it starts in (`sites`, `initial`) and how it's graded (`evaluation`).
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
+import { OWNER, siteName } from '../ctx.ts';
 
 const Call = z.object({ action: z.string(), args: z.record(z.string(), z.unknown()).default({}) });
 export type Call = z.infer<typeof Call>;
@@ -58,21 +65,41 @@ export type Task = z.infer<typeof Task>;
 
 export const TASKS_DIR = resolve(process.env.EVERYDAYBENCH_TASKS ?? 'tasks');
 
-// Every task under tasks/, by id; a file's id must match its path (tasks/tickets/two-seats.json -> tickets/two-seats).
+// prompt.md's front matter and ticket, as the fields Task has.
+export function readPrompt(text: string) {
+	const m = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
+	if (!m) throw new Error('prompt.md starts with front matter between --- lines');
+	const front = (parseYaml(m[1]!) ?? {}) as { start?: string; policy?: string; known?: Record<string, string> };
+	if (!front.start) throw new Error('prompt.md needs a start site');
+	const slash = front.start.indexOf('/');
+	const start = slash < 0 ? { site: front.start } : { site: front.start.slice(0, slash), path: front.start.slice(slash) };
+	return { ticket: m[2]!.trim(), start, policy: front.policy, known: front.known };
+}
+
+// Every task under tasks/, by id: tasks/tickets/two-seats/ is tickets/two-seats, family tickets.
 export function loadTasks(dir = TASKS_DIR): Map<string, Task> {
 	const out = new Map<string, Task>();
 	const walk = (d: string) => {
-		for (const e of readdirSync(d, { withFileTypes: true })) {
-			const p = join(d, e.name);
-			if (e.isDirectory()) walk(p);
-			else if (e.name.endsWith('.json')) {
-				const task = Task.parse(JSON.parse(readFileSync(p, 'utf8')));
-				const id = relative(dir, p).slice(0, -5);
-				if (task.id !== id) throw new Error(`${p}: id should be "${id}"`);
-				out.set(task.id, task);
+		if (existsSync(join(d, 'prompt.md'))) {
+			const id = relative(dir, d);
+			try {
+				const evaluation = JSON.parse(readFileSync(join(d, 'eval.json'), 'utf8'));
+				const prompt = readPrompt(readFileSync(join(d, 'prompt.md'), 'utf8'));
+				out.set(id, Task.parse({ ...evaluation, ...prompt, id, family: id.split('/')[0] }));
+			} catch (err) {
+				throw new Error(`${d}: ${(err as Error).message}`);
 			}
+			return;
 		}
+		for (const e of readdirSync(d, { withFileTypes: true })) if (e.isDirectory()) walk(join(d, e.name));
 	};
 	walk(dir);
 	return out;
 }
+
+// What a harness hands its agent, whole: the ticket, the rules, where the browser is, and who the owner is (for a site
+// that asks). `known` isn't in it: a harness puts those in its vault, or adds them itself.
+export const promptFor = (t: Task) =>
+	[t.ticket, t.policy && `Rules: ${t.policy}`, `${siteName(t.start.site)} is open in the browser.`, `If a site asks who I am: ${OWNER.name}, ${OWNER.email}.`]
+		.filter(Boolean)
+		.join('\n\n');

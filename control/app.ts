@@ -2,7 +2,7 @@
 // never reaches, so an agent can't read a task's answers or reset its world.
 //   GET  /tasks                    the tasks
 //   GET  /tasks/<id>               one task, as written
-//   POST /runs        {task, id?}  start a run: { run, start (URL with the run token), ticket, policy, known }
+//   POST /runs        {task, id?}  start a run: { run, start (URL with the run token), prompt, known, ticket, policy }
 //   POST /runs/<id>/grade {report} grade it
 //   POST /runs/<id>/clock {minutes} move its clock forward (a restock "tomorrow morning")
 //   GET  /runs/<id>/state          every site's rows
@@ -12,7 +12,7 @@ import { Hono } from 'hono';
 import { ORIGIN } from '../src/lib/server/ctx.ts';
 import { advance, deleteRun, getRun } from '../src/lib/server/runs.ts';
 import { grade, snapshot, startTask } from '../src/lib/server/evals/evaluate.ts';
-import { loadTasks } from '../src/lib/server/evals/task.ts';
+import { loadTasks, promptFor } from '../src/lib/server/evals/task.ts';
 
 const tasks = loadTasks();
 const task = (id: string) => tasks.get(id);
@@ -30,7 +30,7 @@ export const control = new Hono()
 		if (!t) return c.json({ error: `no task ${body.task}` }, 404);
 		const run = startTask(t, body.id);
 		const start = `${ORIGIN.replace('{site}', t.start.site)}${t.start.path}${t.start.path.includes('?') ? '&' : '?'}everydaybench_run=${run.id}`;
-		return c.json({ run: run.id, start, ticket: t.ticket, policy: t.policy, known: t.known, sites: t.sites }, 201);
+		return c.json({ run: run.id, start, prompt: promptFor(t), ticket: t.ticket, policy: t.policy, known: t.known, sites: t.sites }, 201);
 	})
 	.post('/runs/:id/grade', async (c) => {
 		const run = getRun(c.req.param('id'));
