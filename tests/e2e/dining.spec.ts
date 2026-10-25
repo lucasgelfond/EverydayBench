@@ -102,3 +102,22 @@ test('Tablenook and Seatwell: Ember Ledger has nothing for two from 7 to 8:30 to
 	expect(g.diff).toEqual([]);
 	expect(g.pass).toBe(true);
 });
+
+test('Tablenook: Saturday for four, 7 to 9: Quillon at 7:30, Ember Ledger at 8:30, each with a fee to cancel; found, not booked', async ({ page }) => {
+	const t = begin(page, 'dining/find-saturday-four');
+	await t.go('tablenook');
+	await t.select(page.getByLabel('Date'), '2026-03-21');
+	await t.select(page.getByLabel('Time'), '20:00');
+	await t.select(page.getByLabel('Party size'), '4');
+	await t.click(page.getByRole('button', { name: "Let's go" }));
+	await expect(page.getByRole('article', { name: 'Brasserie Quillon' }).getByRole('link', { name: '7:30 PM' })).toBeVisible();
+	await expect(page.getByRole('article', { name: 'Ember Ledger Steakhouse' }).getByRole('link', { name: '8:30 PM' })).toBeVisible();
+	// The fee is on the restaurant's page and next to the booking form, before anything is booked.
+	await t.go('tablenook', '/r/ember-ledger?date=2026-03-21&party=4');
+	await expect(page.getByText('Cancellation policy: $50.00 per person')).toBeVisible();
+	await t.click(page.getByRole('link', { name: '8:30 PM' }));
+	await expect(page.getByText('Cancellation policy: $50.00 per person')).toBeVisible();
+	const g = t.grade('For four on Saturday between 7 and 9: Brasserie Quillon at 7:30 PM, Ember Ledger at 8:30 PM. Both charge $50 a person to cancel late. Which do you want?');
+	expect(g.diff).toEqual([]);
+	expect(g.pass).toBe(true);
+});

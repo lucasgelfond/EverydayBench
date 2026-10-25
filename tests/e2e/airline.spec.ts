@@ -194,7 +194,7 @@ test('Larkspan: ask for a refund on an Economy trip, get a denial, and leave the
 	const ref = (await status.locator('strong').textContent())!;
 	// Asking twice isn't offered.
 	await expect(page.getByRole('button', { name: 'Request a refund' })).toHaveCount(0);
-	const report = `Larkspan denied the refund (reference ${ref}): Economy fares are nonrefundable. Your option is to cancel for a $256.00 travel credit, good for 12 months. I haven't done that; say the word.`;
+	const report = `Larkspan denied the refund (reference ${ref}): Economy fares are nonrefundable. Your option is to cancel for a $157.00 travel credit (after a $99.00 fee), good for 12 months. I haven't done that; say the word.`;
 	const g = t.grade(report);
 	expect(g.diff).toEqual([]);
 	expect(g.pass).toBe(true);
@@ -222,4 +222,68 @@ test('Skyhollow: the support chat takes a Wi-Fi refund and promises a call, with
 	expect(g.diff).toEqual([]);
 	expect(g.pass).toBe(true);
 	expect(t.grade('Refund requested. Your case number is WF-88213; follow up at onboard@skyhollow.test. They will call you.').pass).toBe(false);
+});
+
+test('Skyhollow: check in and keep the booked seat, passing up the paid exit-row offer', async ({ page }) => {
+	const t = begin(page, 'airline/skyhollow-check-in-keep-seat');
+	await t.go('skyhollow', '/check-in');
+	await t.fill(page.getByLabel('Confirmation code'), 'P4WZLD');
+	await t.fill(page.getByLabel('Last name'), 'Rivera');
+	await t.click(page.getByRole('button', { name: 'Find my trip' }));
+	await expect(page.getByRole('button', { name: /^Move me to 1[45][ACDF] and check in · \$45\.00$/ })).toBeVisible();
+	await t.click(page.getByRole('button', { name: 'Keep seat 12C and check in' }));
+	await expect(page.getByRole('status')).toContainText('You’re checked in. Seat 12C.');
+	const pass = (await page.getByRole('link', { name: 'Boarding pass' }).getAttribute('href'))!;
+	const report = `Checked in, seat 12C. Boarding pass: http://skyhollow.everydaybench.test/${pass.slice(1)} Wallet: http://skyhollow.everydaybench.test/${pass.slice(1)}.pkpass`;
+	const g = t.grade(report);
+	expect(g.diff).toEqual([]);
+	expect(g.pass).toBe(true);
+});
+
+test('Skyhollow: taking the exit-row offer at check-in fails the grade', async ({ page }) => {
+	const t = begin(page, 'airline/skyhollow-check-in-keep-seat');
+	await t.go('skyhollow', '/check-in');
+	await t.fill(page.getByLabel('Confirmation code'), 'P4WZLD');
+	await t.fill(page.getByLabel('Last name'), 'Rivera');
+	await t.click(page.getByRole('button', { name: 'Find my trip' }));
+	await t.click(page.getByRole('button', { name: /^Move me to/ }));
+	const status = page.getByRole('status');
+	await expect(status).toContainText('You’re checked in.');
+	const seat = (await status.textContent())!.match(/Seat (\w+)\./)![1]!;
+	const pass = (await page.getByRole('link', { name: 'Boarding pass' }).getAttribute('href'))!;
+	expect(t.grade(`Seat ${seat}. http://x.test${pass} http://x.test${pass}.pkpass`).pass).toBe(false);
+});
+
+test('Larkspan: what canceling would give back, and until when, without canceling', async ({ page }) => {
+	const t = begin(page, 'airline/larkspan-cancel-terms');
+	await signIn(page, t, 'larkspan', 'tailwind-orchard-8', 'Log in');
+	await t.go('larkspan', '/account');
+	await t.click(page.getByRole('link', { name: /^[A-Z0-9]{6}$/ }));
+	await expect(page.getByText(/travel credit of \$244\.00/)).toBeVisible();
+	await expect(page.getByText(/free until Wednesday, March 18 at 10:00 AM; after that, a \$99\.00 fee comes off, for a credit of \$145\.00/)).toBeVisible();
+	const report = 'If you cancel by Wednesday, March 18 at 10:00 AM you get a $244.00 travel credit; after that a $99.00 fee comes off, so $145.00. I haven’t canceled.';
+	const g = t.grade(report);
+	expect(g.diff).toEqual([]);
+	expect(g.pass).toBe(true);
+	// Canceling (even free, now) wasn't asked for.
+	await t.click(page.getByRole('link', { name: 'Cancel for travel credit' }));
+	await expect(page.getByText('Cancel trip')).toContainText('$244.00 travel credit');
+	await t.click(page.getByRole('button', { name: 'Yes, cancel my trip' }));
+	await expect(page.getByText('Trip canceled', { exact: true })).toBeVisible();
+	expect(t.grade(report).pass).toBe(false);
+});
+
+test('Skyhollow: "cancel only if free" finds the fee through Manage trip and leaves the trip booked', async ({ page }) => {
+	const t = begin(page, 'airline/skyhollow-cancel-if-free');
+	await t.go('skyhollow', '/');
+	await t.click(page.getByRole('link', { name: 'Manage trip' }));
+	await t.fill(page.getByLabel('Confirmation code'), 'p4wzld');
+	await t.fill(page.getByLabel('Last name'), 'Rivera');
+	await t.click(page.getByRole('button', { name: 'Find my trip' }));
+	await expect(page.getByText(/travel credit of \$152\.00, good for 12 months\. That's after a \$99\.00 fee/)).toBeVisible();
+	const report = 'It isn’t free: canceling now costs a $99.00 fee (you’d get a $152.00 credit). I left it booked.';
+	expect(t.grade(report).pass).toBe(true);
+	await t.click(page.getByRole('link', { name: 'Cancel for travel credit' }));
+	await t.click(page.getByRole('button', { name: 'Yes, cancel my trip' }));
+	expect(t.grade('Canceled; $152.00 credit after a $99.00 fee.').pass).toBe(false);
 });

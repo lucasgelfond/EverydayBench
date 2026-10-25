@@ -335,7 +335,9 @@ export const restaurants = sqliteTable('restaurants', {
 	reviews: integer('reviews').notNull(),
 	// 1 to 4 ($ to $$$$).
 	price: integer('price').notNull(),
-	blurb: text('blurb').notNull()
+	blurb: text('blurb').notNull(),
+	// Charged per person for a no-show or a cancellation within 24 hours; 0 for none. Shown before booking, as on real sites.
+	feeCents: integer('fee_cents').notNull().default(0)
 });
 
 export const slots = sqliteTable('slots', {
@@ -521,7 +523,7 @@ export const FAMILY_TABLES = {
 	shop: ['merchants', 'products', 'accounts', 'cards', 'addresses', 'shop_orders', 'failed_payments', 'faults'],
 	dining: ['restaurants', 'slots', 'booked', 'reservations'],
 	calendar: ['events'],
-	lodging: ['homes', 'nights', 'wishlist', 'stays', 'accounts', 'cards'],
+	lodging: ['homes', 'nights', 'wishlist', 'stays', 'accounts', 'cards', 'faults'],
 	gym: ['locations', 'classes', 'bookings', 'accounts'],
 	cloud: ['accounts', 'cards', 'resets', 'subscriptions', 'servers', 'credits', 'faults'],
 	gov: ['applications', 'faults'],

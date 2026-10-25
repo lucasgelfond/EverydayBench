@@ -15,12 +15,15 @@ import {
 	bookingSeatFee,
 	CABINS,
 	cabinOf,
+	CANCEL_FREE_DAYS,
+	cancelTerms,
 	checkinSeatFee,
 	CHECKIN_CLOSES_MINUTES,
 	CHECKIN_OPENS_HOURS,
 	CREDIT_MONTHS,
 	fareName,
 	EXIT_ROWS,
+	EXTRA_ROOM_FEE,
 	inCabin,
 	isFare,
 	phoneNumber,
@@ -176,9 +179,17 @@ export const checkinOpens = (f: Flight) => addMinutes(f.departsAt, -CHECKIN_OPEN
 export const checkinCloses = (f: Flight) => addMinutes(f.departsAt, -CHECKIN_CLOSES_MINUTES);
 export const passUrl = (ctx: Ctx, site: string, pass: string) => `${ctx.origin(site)}/boarding-pass/${pass}`;
 
+// The exit-row seat check-in offers a passenger who already has an Economy seat (a window, else an aisle), if one is
+// free.
+export function extraRoomOffer(ctx: Ctx, site: string, leg: { flight: Flight; fare: Fare; seat: string | null }) {
+	if (!leg.seat || cabinOf(leg.fare).id !== 'economy' || EXIT_ROWS.includes(Number.parseInt(leg.seat))) return undefined;
+	const taken = takenOn(ctx, site, leg.flight.id);
+	return ['A', 'F', 'C', 'D'].flatMap((l) => EXIT_ROWS.map((row) => `${row}${l}`)).find((s) => !taken.includes(s));
+}
+
 // Checks in a trip's next flight. A passenger without a seat picks one; any but a middle seat costs the preferred-seat
-// fee, charged to the trip's card.
-export function checkIn(ctx: Ctx, c: { site: string; code: string; last: string; flight: string; seat?: string | null }): Result<{ pass: string; seat: string }> {
+// fee, charged to the trip's card. One with a seat keeps it, or takes the exit-row offer (`upgrade`) for its fee.
+export function checkIn(ctx: Ctx, c: { site: string; code: string; last: string; flight: string; seat?: string | null; upgrade?: string | null }): Result<{ pass: string; seat: string }> {
 	const t = findTrip(ctx, c.site, c.code, c.last);
 	if (!t) return { ok: false, error: "We couldn't find a trip with that confirmation code and last name." };
 	if (t.canceled) return { ok: false, error: 'This trip was canceled.' };
@@ -188,17 +199,20 @@ export function checkIn(ctx: Ctx, c: { site: string; code: string; last: string;
 	const now = ctx.now();
 	if (now < checkinOpens(leg.flight)) return { ok: false, error: `Check-in for ${leg.flight.number} opens ${longDate(day(checkinOpens(leg.flight)))} at ${clock(checkinOpens(leg.flight))}.` };
 	if (now >= checkinCloses(leg.flight)) return { ok: false, error: `Check-in for ${leg.flight.number} has closed.` };
-	const seat = leg.seat ?? c.seat ?? '';
+	if (c.upgrade && c.upgrade !== extraRoomOffer(ctx, c.site, leg)) return { ok: false, error: `Seat ${c.upgrade} is no longer available.` };
+	const moved = leg.seat && c.upgrade ? c.upgrade : null;
+	const seat = moved ?? leg.seat ?? c.seat ?? '';
 	if (!seat) return { ok: false, error: 'Choose a seat to check in.' };
 	if (!leg.seat) {
 		if (!inCabin(cabinOf(leg.fare), seat)) return { ok: false, error: `Seat ${seat} isn't in your cabin.` };
 		if (takenOn(ctx, c.site, leg.flight.id).includes(seat)) return { ok: false, error: `Sorry, seat ${seat} was just taken.` };
 	}
-	const feeCents = leg.seat ? 0 : checkinSeatFee(seat);
+	const feeCents = moved ? EXTRA_ROOM_FEE : leg.seat ? 0 : checkinSeatFee(seat);
 	const pass = code(10, ctx.run.seed, 'pass', c.site, t.code, leg.flight.id).toLowerCase();
 	const db = ctx.db(c.site);
 	db.transaction((tx) => {
-		if (!leg.seat) {
+		if (moved) tx.delete(seatsTaken).where(and(eq(seatsTaken.flight, leg.flight.id), eq(seatsTaken.seat, leg.seat!))).run();
+		if (!leg.seat || moved) {
 			tx.update(legs).set({ seat }).where(and(eq(legs.trip, t.code), eq(legs.flight, leg.flight.id))).run();
 			tx.insert(seatsTaken).values({ flight: leg.flight.id, seat }).run();
 		}
@@ -250,6 +264,9 @@ function changeable(ctx: Ctx, site: string, tripCode: string, last: string): Res
 	return { ok: true, t };
 }
 
+// What canceling a trip gives back now, and until when that's free.
+export const tripCancelTerms = (ctx: Ctx, t: Trip) => cancelTerms(t.totalCents, t.legs[0]!.flight.departsAt, ctx.now());
+
 // Canceling frees the trip's seats for others.
 const releaseSeats = (ctx: Ctx, site: string, t: Trip) => {
 	for (const l of t.legs) if (l.seat) ctx.db(site).delete(seatsTaken).where(and(eq(seatsTaken.flight, l.flight.id), eq(seatsTaken.seat, l.seat))).run();
@@ -268,6 +285,7 @@ export function requestRefund(ctx: Ctx, site: string, tripCode: string, last: st
 	ctx.db(site).insert(refunds).values({ code: ref, trip: t.code, status, amountCents: t.totalCents, createdAt: ctx.now() }).run();
 	if (status === 'approved') releaseSeats(ctx, site, t);
 	const fare = fareName(fares.find((f) => !refundable([f])) ?? fares[0]!);
+	const terms = tripCancelTerms(ctx, t);
 	send(ctx, {
 		from: site,
 		to: t.email,
@@ -278,7 +296,8 @@ export function requestRefund(ctx: Ctx, site: string, tripCode: string, last: st
 			: [
 					`We're sorry: we can't refund trip ${t.code}. ${fare} fares are nonrefundable.`,
 					'',
-					`You can still cancel the trip for a travel credit of ${money(t.totalCents)}, good for ${CREDIT_MONTHS} months, from your trip's page.`
+					`You can still cancel the trip for a travel credit of ${money(terms.creditCents)}, good for ${CREDIT_MONTHS} months, from your trip's page.` +
+						(terms.feeCents ? ` That's after the ${money(terms.feeCents)} fee for canceling within ${CANCEL_FREE_DAYS} days of departure.` : '')
 				]
 		)
 			.concat(['', `Reference: ${ref}`])
@@ -288,24 +307,32 @@ export function requestRefund(ctx: Ctx, site: string, tripCode: string, last: st
 	return { ok: true, code: ref, status };
 }
 
-// Canceling for travel credit: the trip's whole price, to spend on another trip within the year. It can't be undone.
+// Canceling for travel credit: the trip's price (less the fee, within a week of departure), to spend on another trip
+// within the year. It can't be undone.
 export function cancelForCredit(ctx: Ctx, site: string, tripCode: string, last: string): Result<{ code: string; amountCents: number }> {
 	const c = changeable(ctx, site, tripCode, last);
 	if (!c.ok) return c;
 	const { t } = c;
 	const credit = `TC-${code(8, ctx.run.seed, 'credit', site, t.code)}`;
 	const expiresOn = addDays(day(ctx.now()), 365);
-	ctx.db(site).insert(travelCredits).values({ code: credit, trip: t.code, amountCents: t.totalCents, expiresOn, createdAt: ctx.now() }).run();
+	const { creditCents, feeCents } = tripCancelTerms(ctx, t);
+	ctx.db(site).insert(travelCredits).values({ code: credit, trip: t.code, amountCents: creditCents, expiresOn, createdAt: ctx.now() }).run();
 	releaseSeats(ctx, site, t);
 	send(ctx, {
 		from: site,
 		to: t.email,
 		kind: 'credit',
 		subject: `Trip ${t.code} is canceled: your travel credit`,
-		body: [`Trip ${t.code} is canceled.`, '', `Travel credit: ${credit}`, `Amount: ${money(t.totalCents)}`, `Use by: ${longDate(expiresOn)}`].join('\n'),
-		data: { code: credit, trip: t.code, amount: String(t.totalCents) }
+		body: [
+			`Trip ${t.code} is canceled.`,
+			'',
+			`Travel credit: ${credit}`,
+			`Amount: ${money(creditCents)}${feeCents ? ` (${money(t.totalCents)} less a ${money(feeCents)} cancellation fee)` : ''}`,
+			`Use by: ${longDate(expiresOn)}`
+		].join('\n'),
+		data: { code: credit, trip: t.code, amount: String(creditCents) }
 	});
-	return { ok: true, code: credit, amountCents: t.totalCents };
+	return { ok: true, code: credit, amountCents: creditCents };
 }
 
 // The trip's last flight that has left, for the support chat (it helps with flights already taken).
@@ -347,7 +374,11 @@ defineActions({
 	'airline.cancelForCredit': (ctx, a) => must(cancelForCredit(ctx, String(a.site), String(a.code), String(a.last)), 'cancel'),
 	'airline.requestCallback': (ctx, a) =>
 		must(requestCallback(ctx, { site: String(a.site), code: String(a.code), last: String(a.last), problem: String(a.problem), phone: String(a.phone) }), 'callback'),
-	'airline.checkIn': (ctx, a) => must(checkIn(ctx, { site: String(a.site), code: String(a.code), last: String(a.last), flight: String(a.flight), seat: a.seat as string | undefined }), 'check in')
+	'airline.checkIn': (ctx, a) =>
+		must(
+			checkIn(ctx, { site: String(a.site), code: String(a.code), last: String(a.last), flight: String(a.flight), seat: a.seat as string | undefined, upgrade: a.upgrade as string | undefined }),
+			'check in'
+		)
 });
 
 // A refund request's reference is what {code} in an answer means for it.
@@ -372,6 +403,7 @@ defineAssertions({
 	// The run's check-ins at a site: how many, the kind of seat, what they cost.
 	checkins: (_ctx, a, { made }) => added(made, 'checkins', a.site).length,
 	checkin_seats: (_ctx, a, { made }) => added(made, 'checkins', a.site).map((c) => seatKind(String(c.seat))).sort(),
+	checkin_seat_ids: (_ctx, a, { made }) => added(made, 'checkins', a.site).map((c) => String(c.seat)).sort(),
 	checkin_fees: (_ctx, a, { made }) => added(made, 'checkins', a.site).reduce((s, c) => s + Number(c.fee_cents), 0),
 	// The report gives the seat, the boarding pass's link and its wallet link (by path: hosts differ between setups).
 	pass_reported: (_ctx, a, { made, report }) => {

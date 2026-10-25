@@ -18,5 +18,6 @@
 		<p>{longDate(day(data.at))} at {clock(data.at)}</p>
 		<p>Party of {data.party}</p>
 		<p class="mt-2 text-muted">{data.restaurant.address}, {data.restaurant.area}</p>
+		{#if data.restaurant.fee}<p class="mt-2 font-semibold">{data.restaurant.fee}</p>{/if}
 	</aside>
 </div>

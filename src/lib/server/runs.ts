@@ -29,7 +29,9 @@ export interface Conditions {
 	hideAria?: boolean;
 }
 
-const dir = (id: string) => join(DATA, id);
+// A run's folder: its databases, run.json, and anything else kept per run (injections.json).
+export const runDir = (id: string) => join(DATA, id);
+const dir = runDir;
 const file = (id: string) => join(dir(id), 'run.json');
 
 // Runs are read on each request, so a clock jump from the control server shows at once; cached by file time.

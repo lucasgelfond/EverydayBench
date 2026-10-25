@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { airport, CREDIT_MONTHS, fareName, refundable } from '#lib/airline.ts';
+	import { airport, CANCEL_FREE_DAYS, CREDIT_MONTHS, fareName, refundable } from '#lib/airline.ts';
 	import { clock, longDate, money } from '#lib/time.ts';
 	let { data, form } = $props();
 	const t = $derived(data.trip);
 	const fares = $derived(t.legs.map((l) => l.fare));
 	const keeps = $derived(fares.find((f) => !refundable([f])));
+	const terms = $derived(data.terms);
 </script>
 
 <section class="card max-w-xl">
@@ -42,7 +43,12 @@
 	{#if !t.canceled && !data.started}
 		<p>
 			{#if keeps}
-				{fareName(keeps)} fares are nonrefundable. You can cancel this trip for a travel credit of {money(t.totalCents)}, good for {CREDIT_MONTHS} months.
+				{fareName(keeps)} fares are nonrefundable. You can cancel this trip for a travel credit of {money(terms.creditCents)}, good for {CREDIT_MONTHS} months.
+				{#if terms.feeCents}
+					That's after a {money(terms.feeCents)} fee: trips canceled within {CANCEL_FREE_DAYS} days of departure pay it.
+				{:else}
+					Canceling is free until {longDate(terms.freeUntil.slice(0, 10))} at {clock(terms.freeUntil)}; after that, a {money(terms.laterFeeCents)} fee comes off, for a credit of {money(terms.laterCents)}.
+				{/if}
 			{:else}
 				This fare is refundable to your card.
 			{/if}
@@ -50,7 +56,7 @@
 		{#if form?.error}<p role="alert" class="font-semibold text-red-600">{form.error}</p>{/if}
 		{#if data.confirming}
 			<form method="POST" action="?/cancel" class="space-y-2 rounded border border-red-300 p-3">
-				<p><strong>Cancel trip {t.code} for a {money(t.totalCents)} travel credit?</strong> Your seats are released, and this can’t be undone.</p>
+				<p><strong>Cancel trip {t.code} for a {money(terms.creditCents)} travel credit?</strong> Your seats are released, and this can’t be undone.</p>
 				<button class="btn">Yes, cancel my trip</button>
 				<a class="btn-quiet" href="/trips/{t.code}">Keep my trip</a>
 			</form>

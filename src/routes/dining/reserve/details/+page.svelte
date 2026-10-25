@@ -7,6 +7,7 @@
 <section class="card mx-auto max-w-xl space-y-4">
 	<h1 class="text-2xl font-bold">Your details</h1>
 	<p>Table for {data.party} on {longDate(day(data.at))} at {clock(data.at)}. <a class="underline" href="/reserve?party={data.party}&date={day(data.at)}">Change</a></p>
+	{#if data.restaurant.fee}<p class="font-semibold">{data.restaurant.fee}</p>{/if}
 	{#if data.open || form?.error}
 		<ReservationForm occasions={data.occasions} values={form?.values} error={form?.error} submit={data.words.reserve} />
 	{:else}

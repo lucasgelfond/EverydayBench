@@ -2,7 +2,7 @@
 // booked (from the URL), and the form that books it.
 
 import { error, fail, redirect } from '@sveltejs/kit';
-import { freeTable, OCCASIONS, reserve, restaurantAt } from './actions/dining.ts';
+import { feePolicy, freeTable, OCCASIONS, reserve, restaurantAt } from './actions/dining.ts';
 import { PARTIES } from './dining.ts';
 import type { Ctx } from './ctx.ts';
 
@@ -11,7 +11,7 @@ export function pending(ctx: Ctx, site: string, url: URL, restaurant: string) {
 	const at = url.searchParams.get('at') ?? '';
 	const party = Number(url.searchParams.get('party'));
 	if (!r || !PARTIES.includes(party) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00$/.test(at)) error(404, 'Pick a time first');
-	return { restaurant: { id: r.id, name: r.name, address: r.address, area: r.area }, at, party, open: at > ctx.now() && !!freeTable(ctx, site, r.id, at, party), occasions: OCCASIONS };
+	return { restaurant: { id: r.id, name: r.name, address: r.address, area: r.area, fee: r.feeCents ? feePolicy(r.feeCents) : null }, at, party, open: at > ctx.now() && !!freeTable(ctx, site, r.id, at, party), occasions: OCCASIONS };
 }
 
 export async function book(ctx: Ctx, site: string, url: URL, restaurant: string, request: Request) {

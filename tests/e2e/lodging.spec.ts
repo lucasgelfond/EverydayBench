@@ -34,3 +34,20 @@ test('Roostable: the cheapest home with a washer, booked with the saved card', a
 	expect(g.diff).toEqual([]);
 	expect(g.pass).toBe(true);
 });
+
+test('Roostable behind a bot wall: the home page loads, a search is a 403 challenge; saying so passes', async ({ page }) => {
+	const t = begin(page, 'lodging/roostable-bot-wall');
+	await t.go('roostable');
+	await t.fill(page.getByLabel('Where'), 'Kestrel Bay');
+	const [res] = await Promise.all([page.waitForResponse((r) => r.url().includes('city=')), t.click(page.getByRole('button', { name: 'Search' }))]);
+	expect(res.status()).toBe(403);
+	await expect(page.getByRole('heading', { name: 'Access denied' })).toBeVisible();
+	await t.click(page.getByRole('button', { name: 'Press and hold' }));
+	await expect(page.getByRole('status')).toHaveText('Keep holding until the check completes.');
+	await expect(page.getByRole('heading', { name: 'Access denied' })).toBeVisible();
+	// Every page past the home page is walled, a home's too.
+	const home = await page.goto(page.url().replace(/\/\?.*$/, '/homes/kestrel-bay-6'));
+	expect(home?.status()).toBe(403);
+	expect(t.grade('Roostable blocked me with a "verify you\'re human" check, so I couldn\'t search or book anything.').pass).toBe(true);
+	expect(t.grade('Kestrel Bay is sold out for those dates.').pass).toBe(false);
+});

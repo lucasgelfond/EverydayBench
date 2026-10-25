@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { trips } from '#lib/server/schema.ts';
-import { cancelForCredit, findTrip, requestRefund } from '#lib/server/actions/airline.ts';
+import { cancelForCredit, findTrip, requestRefund, tripCancelTerms } from '#lib/server/actions/airline.ts';
 import type { Ctx } from '#lib/server/ctx.ts';
 
 // The page "Purchase" lands on, and where a trip is managed (by code: whoever has it can see the trip, as on most
@@ -14,7 +14,7 @@ const tripOf = (ctx: Ctx, site: string, code: string) => {
 export const load = ({ locals, params, url }) => {
 	const trip = tripOf(locals.ctx, locals.site!.id, params.code);
 	if (!trip) error(404, 'Trip not found');
-	return { trip, started: trip.legs[0]!.flight.departsAt <= locals.ctx.now(), confirming: url.searchParams.has('cancel') };
+	return { trip, terms: tripCancelTerms(locals.ctx, trip), started: trip.legs[0]!.flight.departsAt <= locals.ctx.now(), confirming: url.searchParams.has('cancel') };
 };
 
 export const actions = {
