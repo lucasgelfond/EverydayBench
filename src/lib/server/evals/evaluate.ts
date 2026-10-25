@@ -7,7 +7,7 @@ import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { ctxFor, type Ctx } from '../ctx.ts';
-import { createRun, type Conditions, deleteRun, getRun, runSites, SEEDS, siteDb, type Run } from '../runs.ts';
+import { closeRun, createRun, type Conditions, deleteRun, getRun, runSites, SEEDS, siteDb, type Run } from '../runs.ts';
 import { FAMILY_TABLES, TABLES } from '../schema.ts';
 import { SITES } from '../../sites.ts';
 import '../families.ts';
@@ -165,6 +165,8 @@ export function grade(task: Task, runId: string, report = ''): Graded {
 		ANSWER: forbidden.length ? 0 : include ? (include - missing.length) / include : 1
 	};
 	const progress = task.evaluation.basis.reduce((n, b) => n + shares[b], 0) / task.evaluation.basis.length;
+	// The run is over: its databases close (they reopen if anything asks again).
+	closeRun(run.id);
 	return { reward: pass ? 1 : 0, pass, progress: Math.round(progress * 100) / 100, parts, diff, assertions, answer: { missing, forbidden } };
 }
 
@@ -175,15 +177,18 @@ export function changes(task: Task, run: Run): Diff[] {
 }
 
 // The world a task should end in, and the one it starts in (to see what a run changed). Both are the same every time
-// (the replay test checks), so they're made once per task, and again when the seeds change.
+// (the replay test checks), so they're made once per task, and again when the seeds change. A pair is tens of MB, so
+// only the last few tasks' are kept: a whole suite's would run the server out of memory.
 const made = new Map<string, { key: string; expected: State; initial: State }>();
+const KEEP_WORLDS = 4;
 function worlds(task: Task, ignore: string[]) {
 	const dir = join(SEEDS, task.initial.scenario);
 	const key = JSON.stringify([task, ignore, readdirSync(dir).map((f) => statSync(join(dir, f)).mtimeMs)]);
 	const hit = made.get(task.id);
-	if (hit?.key === key) return hit;
-	const fresh = { key, expected: expectedState(task, ignore), initial: expectedState({ ...task, evaluation: { ...task.evaluation, reference: [] } }, ignore) };
+	made.delete(task.id);
+	const fresh = hit?.key === key ? hit : { key, expected: expectedState(task, ignore), initial: expectedState({ ...task, evaluation: { ...task.evaluation, reference: [] } }, ignore) };
 	made.set(task.id, fresh);
+	for (const old of made.keys()) if (made.size > KEEP_WORLDS) made.delete(old);
 	return fresh;
 }
 
