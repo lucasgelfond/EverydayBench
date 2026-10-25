@@ -2,15 +2,34 @@
 // before "Purchase" or "Check in": searches, fares and seat picks live in the URL.
 
 import { and, asc, count, eq, like } from 'drizzle-orm';
-import { accounts, cards, checkins, flights, legs, seatsTaken, trips } from '../schema.ts';
+import { accounts, callbacks, cards, checkins, flights, legs, refunds, seatsTaken, travelCredits, trips } from '../schema.ts';
 import { checkCard, type CardInput } from '../cards.ts';
 import { code, rng } from '../rand.ts';
 import { send } from './mail.ts';
 import { siteName, type Ctx } from '../ctx.ts';
 import { defineActions, must } from '../evals/registry.ts';
-import { added, defineAssertions } from '../evals/assertions.ts';
-import { addMinutes, clock, day, longDate, money, toMs } from '../../time.ts';
-import { airport, bookingSeatFee, CABINS, cabinOf, checkinSeatFee, CHECKIN_CLOSES_MINUTES, CHECKIN_OPENS_HOURS, fareName, EXIT_ROWS, inCabin, isFare, seatKind, type Fare } from '../../airline.ts';
+import { added, CONFIRMATIONS, defineAssertions } from '../evals/assertions.ts';
+import { addDays, addMinutes, clock, day, longDate, money, toMs } from '../../time.ts';
+import {
+	airport,
+	bookingSeatFee,
+	CABINS,
+	cabinOf,
+	checkinSeatFee,
+	CHECKIN_CLOSES_MINUTES,
+	CHECKIN_OPENS_HOURS,
+	CREDIT_MONTHS,
+	fareName,
+	EXIT_ROWS,
+	inCabin,
+	isFare,
+	phoneNumber,
+	refundable,
+	seatKind,
+	WIFI_PROBLEMS,
+	type Fare,
+	type WifiProblem
+} from '../../airline.ts';
 
 export type Flight = typeof flights.$inferSelect;
 export type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
@@ -148,7 +167,9 @@ export function findTrip(ctx: Ctx, site: string, tripCode: string, last: string)
 		.orderBy(asc(flights.departsAt))
 		.all()
 		.map(({ leg, flight }) => ({ ...leg, flight, checkin: done.find((c) => c.flight === flight.id) }));
-	return { ...t, legs: ls };
+	const refund = db.select().from(refunds).where(eq(refunds.trip, t.code)).get();
+	const credit = db.select().from(travelCredits).where(eq(travelCredits.trip, t.code)).get();
+	return { ...t, legs: ls, refund, credit, canceled: refund?.status === 'approved' || !!credit };
 }
 
 export const checkinOpens = (f: Flight) => addMinutes(f.departsAt, -CHECKIN_OPENS_HOURS * 60);
@@ -160,6 +181,7 @@ export const passUrl = (ctx: Ctx, site: string, pass: string) => `${ctx.origin(s
 export function checkIn(ctx: Ctx, c: { site: string; code: string; last: string; flight: string; seat?: string | null }): Result<{ pass: string; seat: string }> {
 	const t = findTrip(ctx, c.site, c.code, c.last);
 	if (!t) return { ok: false, error: "We couldn't find a trip with that confirmation code and last name." };
+	if (t.canceled) return { ok: false, error: 'This trip was canceled.' };
 	const leg = t.legs.find((l) => l.flight.id === c.flight);
 	if (!leg) return { ok: false, error: 'That flight isn’t on this trip.' };
 	if (leg.checkin) return { ok: false, error: 'You’re already checked in for this flight.' };
@@ -217,6 +239,91 @@ export function boardingPass(ctx: Ctx, site: string, pass: string) {
 	return { ...c, trip: t, flight: f, gate: `${'ABC'[n % 3]}${(n % 27) + 1}`, group: (n % 5) + 1, boards: addMinutes(f.departsAt, -40) };
 }
 
+type Trip = NonNullable<ReturnType<typeof findTrip>>;
+
+// A trip that can still be refunded or canceled: found, not canceled, nothing flown yet.
+function changeable(ctx: Ctx, site: string, tripCode: string, last: string): Result<{ t: Trip }> {
+	const t = findTrip(ctx, site, tripCode, last);
+	if (!t) return { ok: false, error: "We couldn't find a trip with that confirmation code and last name." };
+	if (t.canceled) return { ok: false, error: 'This trip is already canceled.' };
+	if (t.legs[0]!.flight.departsAt <= ctx.now()) return { ok: false, error: 'This trip has already started.' };
+	return { ok: true, t };
+}
+
+// Canceling frees the trip's seats for others.
+const releaseSeats = (ctx: Ctx, site: string, t: Trip) => {
+	for (const l of t.legs) if (l.seat) ctx.db(site).delete(seatsTaken).where(and(eq(seatsTaken.flight, l.flight.id), eq(seatsTaken.seat, l.seat))).run();
+};
+
+// A refund request, decided at once: refundable fares are refunded to the card (and the trip canceled); the rest are
+// denied, and the denial says the trip can still be canceled for credit. Asked once per trip.
+export function requestRefund(ctx: Ctx, site: string, tripCode: string, last: string): Result<{ code: string; status: 'approved' | 'denied' }> {
+	const c = changeable(ctx, site, tripCode, last);
+	if (!c.ok) return c;
+	const { t } = c;
+	if (t.refund) return { ok: false, error: `You already asked for a refund (${t.refund.code}).` };
+	const fares = t.legs.map((l) => l.fare);
+	const status = refundable(fares) ? 'approved' : 'denied';
+	const ref = `RF-${code(7, ctx.run.seed, 'refund', site, t.code)}`;
+	ctx.db(site).insert(refunds).values({ code: ref, trip: t.code, status, amountCents: t.totalCents, createdAt: ctx.now() }).run();
+	if (status === 'approved') releaseSeats(ctx, site, t);
+	const fare = fareName(fares.find((f) => !refundable([f])) ?? fares[0]!);
+	send(ctx, {
+		from: site,
+		to: t.email,
+		kind: 'refund',
+		subject: `Your refund request for trip ${t.code}`,
+		body: (status === 'approved'
+			? [`We've refunded ${money(t.totalCents)} to your card ending in ${t.cardLast4}, and canceled trip ${t.code}.`]
+			: [
+					`We're sorry: we can't refund trip ${t.code}. ${fare} fares are nonrefundable.`,
+					'',
+					`You can still cancel the trip for a travel credit of ${money(t.totalCents)}, good for ${CREDIT_MONTHS} months, from your trip's page.`
+				]
+		)
+			.concat(['', `Reference: ${ref}`])
+			.join('\n'),
+		data: { code: ref, trip: t.code, status }
+	});
+	return { ok: true, code: ref, status };
+}
+
+// Canceling for travel credit: the trip's whole price, to spend on another trip within the year. It can't be undone.
+export function cancelForCredit(ctx: Ctx, site: string, tripCode: string, last: string): Result<{ code: string; amountCents: number }> {
+	const c = changeable(ctx, site, tripCode, last);
+	if (!c.ok) return c;
+	const { t } = c;
+	const credit = `TC-${code(8, ctx.run.seed, 'credit', site, t.code)}`;
+	const expiresOn = addDays(day(ctx.now()), 365);
+	ctx.db(site).insert(travelCredits).values({ code: credit, trip: t.code, amountCents: t.totalCents, expiresOn, createdAt: ctx.now() }).run();
+	releaseSeats(ctx, site, t);
+	send(ctx, {
+		from: site,
+		to: t.email,
+		kind: 'credit',
+		subject: `Trip ${t.code} is canceled: your travel credit`,
+		body: [`Trip ${t.code} is canceled.`, '', `Travel credit: ${credit}`, `Amount: ${money(t.totalCents)}`, `Use by: ${longDate(expiresOn)}`].join('\n'),
+		data: { code: credit, trip: t.code, amount: String(t.totalCents) }
+	});
+	return { ok: true, code: credit, amountCents: t.totalCents };
+}
+
+// The trip's last flight that has left, for the support chat (it helps with flights already taken).
+export const flownLeg = (ctx: Ctx, t: Trip) => t.legs.filter((l) => l.flight.departsAt <= ctx.now()).at(-1);
+
+// What the support chat ends with: a call promised, to the number given. No case number, and no email.
+export function requestCallback(ctx: Ctx, c: { site: string; code: string; last: string; problem: string; phone: string }): Result<{ phone: string }> {
+	const t = findTrip(ctx, c.site, c.code, c.last);
+	if (!t) return { ok: false, error: "I couldn't find a trip with that confirmation code and last name." };
+	const leg = flownLeg(ctx, t);
+	if (!leg) return { ok: false, error: "That trip hasn't flown yet." };
+	if (!(c.problem in WIFI_PROBLEMS)) return { ok: false, error: 'Tell me what happened.' };
+	const phone = phoneNumber(c.phone);
+	if (!phone) return { ok: false, error: 'That doesn’t look like a phone number. Try something like 617-555-0143.' };
+	ctx.db(c.site).insert(callbacks).values({ trip: t.code, flight: leg.flight.id, problem: c.problem as WifiProblem, phone, createdAt: ctx.now() }).run();
+	return { ok: true, phone };
+}
+
 export const accountName = (ctx: Ctx, site: string, id: number) => ctx.db(site).select({ name: accounts.name, email: accounts.email }).from(accounts).where(eq(accounts.id, id)).get();
 
 export const tripsOf = (ctx: Ctx, site: string, account: number) => ctx.db(site).select().from(trips).where(eq(trips.account, account)).all();
@@ -236,8 +343,15 @@ defineActions({
 			}),
 			'book'
 		),
+	'airline.requestRefund': (ctx, a) => must(requestRefund(ctx, String(a.site), String(a.code), String(a.last)), 'refund'),
+	'airline.cancelForCredit': (ctx, a) => must(cancelForCredit(ctx, String(a.site), String(a.code), String(a.last)), 'cancel'),
+	'airline.requestCallback': (ctx, a) =>
+		must(requestCallback(ctx, { site: String(a.site), code: String(a.code), last: String(a.last), problem: String(a.problem), phone: String(a.phone) }), 'callback'),
 	'airline.checkIn': (ctx, a) => must(checkIn(ctx, { site: String(a.site), code: String(a.code), last: String(a.last), flight: String(a.flight), seat: a.seat as string | undefined }), 'check in')
 });
+
+// A refund request's reference is what {code} in an answer means for it.
+CONFIRMATIONS.add('refunds');
 
 type Made = Parameters<typeof added>[0];
 const newLegs = (made: Made, site: unknown) => added(made, 'legs', site);
@@ -267,6 +381,10 @@ defineAssertions({
 		const links = [...report.matchAll(/https?:\/\/[^\s)\]>*`"'<]+/g)].map((m) => URL.parse(m[0].replace(/[.,;:!?]+$/, ''))?.pathname);
 		return new RegExp(`\\b${String(c[0]!.seat)}\\b`).test(report) && links.includes(path) && links.includes(`${path}.pkpass`);
 	},
+	// What the run did after booking: refund requests (by decision), cancellations for credit, callbacks asked for.
+	refunds: (_ctx, a, { made }) => added(made, 'refunds', a.site).map((r) => String(r.status)),
+	travel_credits: (_ctx, a, { made }) => added(made, 'travel_credits', a.site).length,
+	callbacks: (_ctx, a, { made }) => added(made, 'callbacks', a.site).length,
 	// The report says one of these (any case): a date written any of several ways.
 	report_says_any: (_ctx, a, { report }) => (a.texts as string[]).some((t) => report.toLowerCase().includes(t.toLowerCase()))
 });

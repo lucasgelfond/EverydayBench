@@ -6,10 +6,11 @@ import { balance, creditsOf, TOP_UPS, topUp } from '#lib/server/actions/cloud.ts
 export const load = (event) => {
 	const account = mustSignIn(event);
 	const ctx = event.locals.ctx;
+	const site = event.locals.site!.id;
 	return {
-		balanceCents: balance(ctx, account),
-		credits: creditsOf(ctx, account),
-		cards: savedCards(ctx, 'cloudpail', account).map(({ id, brand, last4 }) => ({ id, brand, last4 })),
+		balanceCents: balance(ctx, site, account),
+		credits: creditsOf(ctx, site, account),
+		cards: savedCards(ctx, site, account).map(({ id, brand, last4 }) => ({ id, brand, last4 })),
 		amounts: TOP_UPS,
 		added: event.url.searchParams.get('added') ?? undefined
 	};
@@ -18,7 +19,7 @@ export const load = (event) => {
 export const actions = {
 	default: async (event) => {
 		const f = await event.request.formData();
-		const r = topUp(event.locals.ctx, mustSignIn(event), Number(f.get('amount')), Number(f.get('card')));
+		const r = topUp(event.locals.ctx, event.locals.site!.id, mustSignIn(event), Number(f.get('amount')), Number(f.get('card')));
 		if (!r.ok) return fail(400, { error: r.error });
 		redirect(303, `/billing?added=${r.code}`);
 	}

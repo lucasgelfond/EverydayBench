@@ -82,6 +82,43 @@ test('Forkfly: the best-rated sandwich is over the cap with fees and tip, so the
 	expect(t.grade(`Rotisserie Chicken Sandwich from Coop & Crumb, $22.27 total. Order ${code}.`).pass).toBe(true);
 });
 
+test('Forkfly: two Mopedettes; the Old Mill one, though Midtown is listed first', async ({ page }) => {
+	const t = begin(page, 'shop/forkfly-banh-mi-old-mill');
+	await t.go('forkfly', '/account/sign-in?next=/');
+	await signIn(t, page, 'extra-crispy-77');
+	await t.fill(page.getByLabel('Search restaurants and dishes'), 'mopedette');
+	await t.click(page.getByRole('main').getByRole('button', { name: 'Search' }));
+	const found = page.getByRole('main').getByRole('listitem');
+	await expect(found).toHaveCount(2);
+	await expect(found.first()).toContainText('Midtown');
+	await t.click(found.filter({ hasText: 'Old Mill' }).getByRole('link', { name: 'Mopedette' }));
+	await expect(page.getByText('Old Mill · 9 Millrace Ln')).toBeVisible();
+	await t.click(page.getByRole('button', { name: 'Add to order: Grilled Pork Banh Mi, $10.75' }));
+	await t.click(page.getByRole('status').getByRole('link', { name: /Your order/ }));
+	await expect(page.getByText('From Mopedette (Old Mill)')).toBeVisible();
+	await t.click(page.getByRole('link', { name: 'Go to checkout' }));
+	await expect(page.getByRole('complementary', { name: 'Order summary' })).toContainText('Mopedette, Old Mill');
+	// $10.75, $2.99 delivery, $2.00 service, $0.86 tax, 20% tip.
+	await t.click(page.getByRole('button', { name: 'Place order · $18.75' }));
+	await expect(page.getByRole('heading', { name: 'Mopedette (Old Mill) is preparing your order' })).toBeVisible();
+	const code = (await page.locator('strong.font-mono').textContent())!;
+	expect(t.grade(`Grilled Pork Banh Mi from Mopedette in Old Mill, $18.75. Order ${code}.`).pass).toBe(true);
+});
+
+test('Forkfly: the card declines at the Old Mill Mopedette; nothing else tried', async ({ page }) => {
+	const t = begin(page, 'shop/forkfly-banh-mi-declined');
+	await t.go('forkfly', '/account/sign-in?next=/r/mopedette-old-mill');
+	await signIn(t, page, 'extra-crispy-77');
+	await t.click(page.getByRole('button', { name: 'Add to order: Grilled Pork Banh Mi, $10.75' }));
+	await t.click(page.getByRole('status').getByRole('link', { name: /Your order/ }));
+	await t.click(page.getByRole('link', { name: 'Go to checkout' }));
+	await t.click(page.getByRole('button', { name: 'Place order · $18.75' }));
+	await expect(page.getByText('Your card was declined.')).toBeVisible();
+	const g = t.grade('Your Mastercard ending in 4444 was declined at the Old Mill Mopedette, so nothing was ordered.');
+	expect(g.assertions.filter((a) => !a.pass)).toEqual([]);
+	expect(g.pass).toBe(true);
+});
+
 test('Forkfly: a lower tip changes the total before ordering', async ({ page }) => {
 	const t = begin(page, 'shop/forkfly-chicken-sandwich');
 	await t.go('forkfly', '/account/sign-in?next=/r/ember-rotisserie');

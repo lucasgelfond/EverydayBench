@@ -18,6 +18,7 @@
 		{#each data.restaurants as r (r.id)}
 			<li class="card">
 				<a href="/r/{r.id}" class="text-lg font-semibold hover:underline">{r.name}</a>
+				<p class="text-sm">{r.area} · {r.address}</p>
 				<p class="text-sm text-muted">{r.cuisine} · {(r.rating / 10).toFixed(1)} ★ ({r.reviews.toLocaleString('en-US')}) · {r.etaMinutes} min · {money(r.deliveryFeeCents)} delivery fee</p>
 			</li>
 		{:else}

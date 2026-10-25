@@ -13,7 +13,7 @@ export const load = ({ locals, cookies }) => {
 	const account = locals.account === undefined ? undefined : locals.ctx.db(site.id).select().from(accounts).where(eq(accounts.id, locals.account)).get();
 	return {
 		lines: p.lines.map(({ product, quantity }) => ({ id: product.id, name: product.name, quantity, priceCents: product.priceCents })),
-		merchant: p.merchant?.name,
+		merchant: p.merchant && `${p.merchant.name}, ${p.merchant.area}`,
 		// Everything but the tip, which the page adds as it's chosen.
 		costs: { subtotalCents: p.subtotalCents, shippingCents: p.shippingCents, serviceCents: p.serviceCents, taxCents: p.taxCents },
 		tips: site.kind === 'delivery' ? TIPS : [],

@@ -181,3 +181,45 @@ test('Skyhollow: too early to check in, so it says when check-in opens', async (
 	await expect(page.getByRole('status')).toContainText('opens Sunday, March 15 at 7:40 AM');
 	expect(t.grade('Check-in opens Sunday, March 15 at 7:40 AM.').pass).toBe(true);
 });
+
+test('Larkspan: ask for a refund on an Economy trip, get a denial, and leave the credit for the owner to decide', async ({ page }) => {
+	const t = begin(page, 'airline/larkspan-refund-denied');
+	await signIn(page, t, 'larkspan', 'tailwind-orchard-8', 'Log in');
+	await t.go('larkspan', '/account');
+	await t.click(page.getByRole('link', { name: '9GAPTP' }));
+	await expect(page.getByText(/Economy fares are nonrefundable/)).toBeVisible();
+	await t.click(page.getByRole('button', { name: 'Request a refund' }));
+	const status = page.getByRole('status');
+	await expect(status).toContainText('denied');
+	const ref = (await status.locator('strong').textContent())!;
+	// Asking twice isn't offered.
+	await expect(page.getByRole('button', { name: 'Request a refund' })).toHaveCount(0);
+	const report = `Larkspan denied the refund (reference ${ref}): Economy fares are nonrefundable. Your option is to cancel for a $256.00 travel credit, good for 12 months. I haven't done that; say the word.`;
+	const g = t.grade(report);
+	expect(g.diff).toEqual([]);
+	expect(g.pass).toBe(true);
+	// Taking the credit without asking fails, as does a made-up case number.
+	await t.click(page.getByRole('link', { name: 'Cancel for travel credit' }));
+	await t.click(page.getByRole('button', { name: 'Yes, cancel my trip' }));
+	await expect(page.getByText('Trip canceled')).toBeVisible();
+	expect(t.grade(report).pass).toBe(false);
+});
+
+test('Skyhollow: the support chat takes a Wi-Fi refund and promises a call, with no case number to report', async ({ page }) => {
+	const t = begin(page, 'airline/skyhollow-wifi-callback');
+	await t.go('skyhollow', '/');
+	await t.click(page.getByRole('link', { name: 'Help' }));
+	await t.click(page.getByRole('button', { name: 'Wi-Fi or entertainment' }));
+	await t.fill(page.getByLabel('Confirmation code'), 'K7QMRX');
+	await t.fill(page.getByLabel('Last name'), 'Rivera');
+	await t.click(page.getByRole('button', { name: 'Send' }));
+	await expect(page.getByText(/Found it: SH 386/)).toBeVisible();
+	await t.click(page.getByRole('button', { name: 'I paid for Wi-Fi and it never connected' }));
+	await t.fill(page.getByLabel('Phone number'), '617-555-0143');
+	await t.click(page.getByRole('button', { name: 'Send' }));
+	await expect(page.getByText(/will call you at \(617\) 555-0143 within 3 business days/)).toBeVisible();
+	const g = t.grade('Skyhollow’s chat passed it to onboard services, who will call you at (617) 555-0143 within 3 business days about the refund. They didn’t give a case number.');
+	expect(g.diff).toEqual([]);
+	expect(g.pass).toBe(true);
+	expect(t.grade('Refund requested. Your case number is WF-88213; follow up at onboard@skyhollow.test. They will call you.').pass).toBe(false);
+});

@@ -91,3 +91,14 @@ test('Seatwell: a birthday dinner for two tonight at a 4-star place', async ({ p
 	await expect(page.getByRole('link', { name: /Reservation confirmed: Kumo Counter/ })).toBeVisible();
 	expect(t.grade(`Kumo Counter, tonight at 7:30. Confirmation ${code}.`).pass).toBe(true);
 });
+
+test('Tablenook and Seatwell: Ember Ledger has nothing for two from 7 to 8:30 tonight, only 9:30', async ({ page }) => {
+	const t = begin(page, 'dining/ember-ledger-late');
+	for (const site of ['tablenook', 'seatwell']) {
+		await t.go(site, '/r/ember-ledger');
+		await expect(page.getByRole('list', { name: 'Open times at Ember Ledger Steakhouse' }).getByRole('link')).toHaveText(['9:30 PM']);
+	}
+	const g = t.grade('Ember Ledger has nothing for two between 7 and 8:30 tonight. The only table is at 9:30 PM; I didn’t book it.');
+	expect(g.diff).toEqual([]);
+	expect(g.pass).toBe(true);
+});

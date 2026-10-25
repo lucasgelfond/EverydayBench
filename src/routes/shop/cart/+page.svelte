@@ -8,7 +8,7 @@
 {#if data.added}<p role="status" class="card mb-4 font-semibold text-green-700">Added to {data.words.cart.toLowerCase()}: {data.added}</p>{/if}
 {#if form?.error}<p role="alert" class="mb-3 font-semibold text-red-600">{form.error}</p>{/if}
 {#if data.lines.length}
-	{#if data.merchant}<p class="mb-3">From <a class="font-semibold underline" href="/r/{data.merchant.id}">{data.merchant.name}</a></p>{/if}
+	{#if data.merchant}<p class="mb-3">From <a class="font-semibold underline" href="/r/{data.merchant.id}">{data.merchant.name}</a> ({data.merchant.area})</p>{/if}
 	<ul class="card divide-y divide-current/10" aria-label="Items">
 		{#each data.lines as l (l.id)}
 			<li class="flex flex-wrap items-center justify-between gap-3 py-3">

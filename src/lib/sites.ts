@@ -237,6 +237,13 @@ export const SITES: Record<string, Site> = {
 		tagline: 'Servers by the bucket',
 		skin: { vars: { '--brand': '#0b6bcb', '--brand-ink': '#ffffff', '--bg': '#f4f7fb', '--surface': '#ffffff', '--ink': '#0b1b2b', '--muted': '#5f6f82', '--radius': '6px', ...font('ui-sans-serif, system-ui, sans-serif') }, words: {} }
 	},
+	voltbarrow: {
+		id: 'voltbarrow',
+		family: 'cloud',
+		name: 'Voltbarrow',
+		tagline: 'GPUs by the barrow',
+		skin: { vars: { '--brand': '#6d28d9', '--brand-ink': '#ffffff', '--bg': '#0e0b16', '--surface': '#18132a', '--ink': '#efeaff', '--muted': '#a69cc4', '--radius': '12px', ...font('"JetBrains Mono", ui-monospace, monospace') }, words: {} }
+	},
 	swiftgate: {
 		id: 'swiftgate',
 		family: 'gov',

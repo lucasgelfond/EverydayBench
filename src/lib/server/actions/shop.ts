@@ -2,9 +2,10 @@
 // then (shop/cart.ts), so browsing, adding and removing are never writes a grader sees.
 
 import { and, count, eq, inArray } from 'drizzle-orm';
-import { addresses, cards, merchants, products, shopOrders, type Line } from '../schema.ts';
+import { addresses, cards, failedPayments, merchants, products, shopOrders, type Line } from '../schema.ts';
 import { checkCard, type CardInput } from '../cards.ts';
 import { code } from '../rand.ts';
+import { trip } from './faults.ts';
 import { send } from './mail.ts';
 import { siteName, type Ctx } from '../ctx.ts';
 import { defineActions, must } from '../evals/registry.ts';
@@ -90,6 +91,12 @@ export function placeOrder(ctx: Ctx, o: Order): Result<{ code: string; totalCent
 	if (o.payment.kind === 'saved') {
 		const card = o.account !== undefined ? db.select().from(cards).where(and(eq(cards.id, o.payment.card), eq(cards.account, o.account))).get() : undefined;
 		if (!card) return { ok: false, error: 'Choose a saved card.' };
+		// A saved card a task set to decline. The attempt is kept, as shops list a failed payment, so a grader can see
+		// what the agent tried to buy and where.
+		if (trip(ctx, o.site, 'decline')) {
+			db.insert(failedPayments).values({ account: o.account ?? null, merchant: p.merchant?.id ?? null, totalCents: p.totalCents, cardLast4: card.last4, createdAt: ctx.now() }).run();
+			return { ok: false, error: 'Your card was declined. Use a different card or contact your bank.' };
+		}
 		last4 = card.last4;
 	} else {
 		const checked = checkCard(o.payment.card, day(ctx.now()));
@@ -123,7 +130,7 @@ export function placeOrder(ctx: Ctx, o: Order): Result<{ code: string; totalCent
 		from: o.site,
 		to: order.email,
 		kind: 'order',
-		subject: delivery ? `Your ${p.merchant?.name ?? siteName(o.site)} order is confirmed — ${order.code}` : `Your ${siteName(o.site)} order ${order.code}`,
+		subject: delivery ? `Your ${p.merchant ? `${p.merchant.name} (${p.merchant.area})` : siteName(o.site)} order is confirmed — ${order.code}` : `Your ${siteName(o.site)} order ${order.code}`,
 		body: [
 			`Thanks for your order! Order number: ${order.code}`,
 			'',
@@ -184,6 +191,18 @@ defineAssertions({
 	shop_lines: (_ctx, a, { made }) => {
 		const o = ordersAt(made, a.site);
 		return o.length === 1 ? o[0]!.lines.length : `${o.length} orders`;
+	},
+
+	// The run placed at least one order, and every one is from this restaurant (by id: chains share a name).
+	shop_from: (_ctx, a, { made }) => {
+		const o = added(made, 'shop_orders', a.site);
+		return o.length > 0 && o.every((r) => r.merchant === a.merchant);
+	},
+
+	// The run's card was declined at least once, and only ever at this restaurant: it tried the right one.
+	declined_at: (_ctx, a, { made }) => {
+		const d = added(made, 'failed_payments', a.site);
+		return d.length > 0 && d.every((r) => r.merchant === a.merchant);
 	},
 
 	// Every order the run placed cost at most this, in cents, with fees, tax and tip: a spending cap respected.
