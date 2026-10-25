@@ -1,6 +1,7 @@
-// Roostable's seed data: homes in three cities with nights already taken, and the owner's account and saved cards.
-// Kestrel Bay's homes are written out (a task needs one cheapest home that fits, with near misses around it); the other
-// cities' are generated.
+// Home rentals' seed data: homes with nights already taken, and the owner's account and saved cards. Roostable has three
+// cities; Kestrel Bay's homes are written out (a task needs one cheapest home that fits, with near misses around it), the
+// other cities' are generated. Nookery (drip pricing) lists fewer homes, some of them Roostable's too, with lower nightly
+// prices that its fees more than make up for.
 
 import { accounts, cards, homes, nights } from '../../src/lib/server/schema.ts';
 import { rng } from '../../src/lib/server/rand.ts';
@@ -73,7 +74,47 @@ function generated(city: string, areas: string[], index: number, n: number) {
 	return out;
 }
 
+// Nookery's Kestrel Bay homes: [title, area, kind, guests, bedrooms, beds, nightly, cleaning, amenities]. Its cheapest
+// headline price in Old Harbor (Harborlight Bunk) comes to more, all in, than Roostable's Driftwood Room.
+const NOOKERY: [string, string, string, number, number, number, number, number, string[]][] = [
+	['Harborlight Bunk', 'Old Harbor', 'Private room', 2, 1, 1, 79, 65, ['wifi']],
+	['Driftwood Room', 'Old Harbor', 'Private room', 2, 1, 1, 89, 40, ['wifi']],
+	['Quayside Studio', 'South Shore', 'Entire apartment', 2, 1, 1, 99, 55, ['wifi', 'kitchen']],
+	['Net Loft', 'Old Harbor', 'Entire loft', 2, 1, 1, 119, 45, ['wifi', 'kitchen', 'washer']],
+	["Pilot's Cabin", 'North Woods', 'Entire cabin', 4, 2, 2, 129, 70, ['wifi', 'kitchen', 'parking']],
+	['Lantern House', 'Lighthouse Point', 'Entire home', 4, 2, 3, 150, 80, ['wifi', 'kitchen', 'washer', 'parking']]
+];
+
+function seedNookery(make: Make) {
+	const db = make('nookery');
+	const kestrel = NOOKERY.map(([title, area, kind, guests, bedrooms, beds, nightly, cleaning, amenities], i) => ({
+		id: `nookery-kb-${i + 1}`,
+		city: 'Kestrel Bay',
+		area,
+		title,
+		kind,
+		guests,
+		bedrooms,
+		beds,
+		baths: 1,
+		nightlyCents: nightly * 100,
+		cleaningCents: cleaning * 100,
+		amenities,
+		rating: 430 + ((i * 11) % 60),
+		reviews: 8 + i * 13,
+		host: HOSTS[(i + 5) % HOSTS.length]!,
+		description: `${kind} in ${area}.`
+	}));
+	const others = generated('Port Alder', CITIES[0]!.areas, 10, 12);
+	db.insert(homes).values([...kestrel, ...others.map((h) => h.home)]).run();
+	const taken = others.flatMap((h) => h.taken.map((d) => ({ home: h.home.id!, date: addDays(START, d) })));
+	if (taken.length) db.insert(nights).values(taken).run();
+	db.insert(accounts).values({ email: OWNER.email, name: OWNER.name, password: passwordHash(OWNER.email, 'nest-egg-2026') }).run();
+	db.insert(cards).values({ account: 1, brand: 'Mastercard', last4: '5454', expMonth: 11, expYear: 2028 }).run();
+}
+
 export function seedLodging(make: Make) {
+	seedNookery(make);
 	const db = make('roostable');
 	const kestrel = KESTREL.map(([title, area, kind, guests, bedrooms, beds, nightly, cleaning, amenities, taken], i) => ({
 		home: {

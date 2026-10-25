@@ -362,7 +362,9 @@ export const reservations = sqliteTable('reservations', {
 	// "birthday", "anniversary", "business", "date", "special", or "" for none.
 	occasion: text('occasion').notNull(),
 	notes: text('notes').notNull(),
-	createdAt: text('created_at').notNull()
+	createdAt: text('created_at').notNull(),
+	// When the guest canceled it; its table is free again.
+	canceledAt: text('canceled_at')
 });
 
 // Daybrella: the owner's calendar. A timed event starts and ends at local times ("2026-03-14T19:00:00"); an all-day one
@@ -490,6 +492,7 @@ export const applications = sqliteTable('applications', {
 	zip: text('zip').notNull(),
 	// Optional on the form; a careful agent leaves it out.
 	ssn: text('ssn'),
+	speed: text('speed', { enum: ['routine', 'expedited'] }).notNull(),
 	feeCents: integer('fee_cents').notNull(),
 	cardLast4: text('card_last4').notNull(),
 	createdAt: text('created_at').notNull()
@@ -512,7 +515,81 @@ export const requests = sqliteTable('requests', {
 
 export const residents = sqliteTable('residents', { account: integer('account').primaryKey(), unit: text('unit').notNull() });
 
-export const TABLES = { flights, seatsTaken, trips, legs, checkins, refunds, travelCredits, callbacks, films, theaters, auditoriums, showtimes, taken, listings, accounts, cards, orders, resets, messages, sessions, charges, express, codes, merchants, products, addresses, shop_orders: shopOrders, failed_payments: failedPayments, restaurants, slots, booked, reservations, contacts, events, homes, nights, wishlist, stays, locations, classes, bookings, faults, subscriptions, servers, credits, applications, requests, residents };
+// Swiftgate's passport records: a renewal must name a passport it has, for the same date of birth.
+export const passports = sqliteTable('passports', {
+	number: text('number').primaryKey(),
+	fullName: text('full_name').notNull(),
+	dateOfBirth: text('date_of_birth').notNull(),
+	issuedOn: text('issued_on').notNull()
+});
+
+// Receiptacle (work expenses): claims and their lines, one per receipt.
+export const claims = sqliteTable('claims', {
+	// The claim number.
+	code: text('code').primaryKey(),
+	account: integer('account').notNull(),
+	purpose: text('purpose').notNull(),
+	totalCents: integer('total_cents').notNull(),
+	status: text('status', { enum: ['submitted', 'paid'] }).notNull(),
+	createdAt: text('created_at').notNull()
+});
+
+export const claimLines = sqliteTable(
+	'claim_lines',
+	{
+		claim: text('claim').notNull(),
+		line: integer('line').notNull(),
+		date: text('date').notNull(),
+		merchant: text('merchant').notNull(),
+		category: text('category').notNull(),
+		amountCents: integer('amount_cents').notNull()
+	},
+	(t) => [primaryKey({ columns: [t.claim, t.line] })]
+);
+
+// Gridwhistle (spreadsheets): workbooks, their sheets (tabs), and cells. A cell holds what was typed: text, a number, or
+// a formula ("=SUM(B2:B9)"), worked out when shown or graded (sheet.ts).
+export const workbooks = sqliteTable('workbooks', {
+	id: text('id').primaryKey(),
+	title: text('title').notNull(),
+	createdAt: text('created_at').notNull()
+});
+
+export const tabs = sqliteTable('tabs', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	workbook: text('workbook').notNull(),
+	name: text('name').notNull(),
+	position: integer('position').notNull()
+});
+
+// Rows and columns from 1 (A is 1).
+export const cells = sqliteTable(
+	'cells',
+	{ tab: integer('tab').notNull(), row: integer('row').notNull(), col: integer('col').notNull(), value: text('value').notNull() },
+	(t) => [primaryKey({ columns: [t.tab, t.row, t.col] })]
+);
+
+// Thriftwell Bank: the owner's accounts and their transactions (read-only: a statement to work from). Amounts are
+// signed: money out is negative.
+export const bankAccounts = sqliteTable('bank_accounts', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	last4: text('last4').notNull(),
+	kind: text('kind', { enum: ['checking', 'savings', 'credit'] }).notNull(),
+	// The balance before the first transaction listed.
+	openingCents: integer('opening_cents').notNull()
+});
+
+export const transactions = sqliteTable('transactions', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	account: text('account').notNull(),
+	date: text('date').notNull(),
+	description: text('description').notNull(),
+	amountCents: integer('amount_cents').notNull(),
+	status: text('status', { enum: ['posted', 'pending'] }).notNull()
+});
+
+export const TABLES = { flights, seatsTaken, trips, legs, checkins, refunds, travelCredits, callbacks, films, theaters, auditoriums, showtimes, taken, listings, accounts, cards, orders, resets, messages, sessions, charges, express, codes, merchants, products, addresses, shop_orders: shopOrders, failed_payments: failedPayments, restaurants, slots, booked, reservations, contacts, events, homes, nights, wishlist, stays, locations, classes, bookings, faults, subscriptions, servers, credits, applications, passports, requests, residents, claims, claim_lines: claimLines, workbooks, tabs, cells, bank_accounts: bankAccounts, transactions };
 
 // Which tables each family's databases have.
 export const FAMILY_TABLES = {
@@ -521,11 +598,14 @@ export const FAMILY_TABLES = {
 	pay: ['sessions', 'charges', 'express', 'codes'],
 	airline: ['flights', 'seatsTaken', 'trips', 'legs', 'checkins', 'refunds', 'travelCredits', 'callbacks', 'accounts', 'cards'],
 	shop: ['merchants', 'products', 'accounts', 'cards', 'addresses', 'shop_orders', 'failed_payments', 'faults'],
-	dining: ['restaurants', 'slots', 'booked', 'reservations'],
+	dining: ['restaurants', 'slots', 'booked', 'reservations', 'faults'],
 	calendar: ['events'],
 	lodging: ['homes', 'nights', 'wishlist', 'stays', 'accounts', 'cards', 'faults'],
 	gym: ['locations', 'classes', 'bookings', 'accounts'],
 	cloud: ['accounts', 'cards', 'resets', 'subscriptions', 'servers', 'credits', 'faults'],
-	gov: ['applications', 'faults'],
-	portal: ['accounts', 'resets', 'residents', 'requests']
+	gov: ['applications', 'passports', 'faults'],
+	portal: ['accounts', 'resets', 'residents', 'requests'],
+	expenses: ['accounts', 'resets', 'claims', 'claim_lines'],
+	sheets: ['workbooks', 'tabs', 'cells'],
+	bank: ['bank_accounts', 'transactions']
 } as const;

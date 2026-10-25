@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { FullAutoFill } from 'svelte/elements';
+	import { money } from '#lib/time.ts';
 	let { data, form } = $props();
 	const v = $derived<Record<string, string | undefined>>(form?.values ?? data.draft);
 	const e = $derived<Record<string, string | undefined>>(form?.errors ?? {});
@@ -36,6 +37,16 @@
 			{@render field('city', 'City', 'text', '', 'address-level2')}
 			{@render field('zip', 'ZIP code', 'text', '', 'postal-code')}
 		</div>
+	</fieldset>
+	<fieldset class="space-y-2">
+		<legend class="mb-1 text-lg font-semibold">Processing</legend>
+		{#each Object.entries(data.speeds) as [id, s] (id)}
+			<label class="flex items-center gap-2"
+				><input type="radio" name="speed" value={id} checked={(v.speed ?? 'routine') === id} />
+				{s.name}: {s.weeks}{s.extraCents ? `, ${money(s.extraCents)} more` : ''}</label
+			>
+		{/each}
+		{#if form?.speedError}<span class="block text-sm font-semibold text-red-700">{form.speedError}</span>{/if}
 	</fieldset>
 	<button class="btn">Continue to review</button>
 </form>

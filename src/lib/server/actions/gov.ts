@@ -1,9 +1,10 @@
 // Swiftgate: Kestrel Bay's travel documents office. A passport renewal is filled in over a few pages (kept in a signed
 // cookie, not the database) and written only when its fee is paid. The payment service can be down (a fault a task
-// arms): it says so, and nothing is charged or filed.
+// arms): it says so, and nothing is charged or filed. A renewal has to name a passport on record, and expedited
+// processing costs more, so a renewal can fail to match what the owner said.
 
-import { count } from 'drizzle-orm';
-import { applications } from '../schema.ts';
+import { count, eq } from 'drizzle-orm';
+import { applications, passports } from '../schema.ts';
 import { checkCard, type CardInput } from '../cards.ts';
 import { code } from '../rand.ts';
 import { send } from './mail.ts';
@@ -18,6 +19,11 @@ CONFIRMATIONS.add('applications');
 
 const SITE = 'swiftgate';
 export const RENEWAL_FEE_CENTS = 13000;
+// Processing speeds, and what each adds to the fee.
+export const SPEEDS = { routine: { name: 'Routine', weeks: '4 to 6 weeks', extraCents: 0 }, expedited: { name: 'Expedited', weeks: '2 to 3 weeks', extraCents: 6000 } } as const;
+export type Speed = keyof typeof SPEEDS;
+export const isSpeed = (v: unknown): v is Speed => typeof v === 'string' && v in SPEEDS;
+export const feeOf = (speed: Speed) => RENEWAL_FEE_CENTS + SPEEDS[speed].extraCents;
 
 // The renewal form's fields, as the pages name them.
 export const FIELDS = ['fullName', 'dateOfBirth', 'passportNumber', 'issuedOn', 'email', 'phone', 'street', 'city', 'zip', 'ssn'] as const;
@@ -43,10 +49,19 @@ export function problems(r: Partial<Renewal>, today: string) {
 	return out;
 }
 
-export function submitRenewal(ctx: Ctx, r: Renewal, card: CardInput): Result<{ code: string }> {
+// Whether the passport is on record for that date of birth: the number is what's checked, as a real office would.
+export function unknownPassport(ctx: Ctx, r: Pick<Renewal, 'passportNumber' | 'dateOfBirth'>) {
+	const p = ctx.db(SITE).select().from(passports).where(eq(passports.number, r.passportNumber.trim().toUpperCase())).get();
+	return p && p.dateOfBirth === r.dateOfBirth ? undefined : 'We can’t find a passport with that number for this date of birth. Check the number on your passport’s photo page.';
+}
+
+export function submitRenewal(ctx: Ctx, r: Renewal, card: CardInput, speed: Speed = 'routine'): Result<{ code: string }> {
 	const today = day(ctx.now());
 	const wrong = Object.values(problems(r, today));
 	if (wrong.length) return { ok: false, error: wrong[0]! };
+	const unknown = unknownPassport(ctx, r);
+	if (unknown) return { ok: false, error: unknown };
+	const feeCents = feeOf(speed);
 	if (trip(ctx, SITE, 'payment-down')) return { ok: false, error: 'Our payment service is temporarily unavailable. You have not been charged. Please try again.' };
 	const checked = checkCard(card, today);
 	if (!checked.ok) return checked;
@@ -66,7 +81,8 @@ export function submitRenewal(ctx: Ctx, r: Renewal, card: CardInput): Result<{ c
 		city: r.city.trim(),
 		zip: r.zip.trim(),
 		ssn: r.ssn?.trim() ? r.ssn.replace(/\D/g, '') : null,
-		feeCents: RENEWAL_FEE_CENTS,
+		speed,
+		feeCents,
 		cardLast4: checked.last4,
 		createdAt: ctx.now()
 	};
@@ -76,7 +92,7 @@ export function submitRenewal(ctx: Ctx, r: Renewal, card: CardInput): Result<{ c
 		to: row.email,
 		kind: 'receipt',
 		subject: `Passport renewal received — receipt ${receipt}`,
-		body: `We received your passport renewal application on ${longDate(today)}.\n\nReceipt number: ${receipt}\nFee paid: ${money(RENEWAL_FEE_CENTS)} (card ending in ${checked.last4})\n\nMail your current passport to the address on your receipt page within 10 days. Expect your new passport in 4 to 6 weeks.`,
+		body: `We received your passport renewal application on ${longDate(today)}.\n\nReceipt number: ${receipt}\nFee paid: ${money(feeCents)} (card ending in ${checked.last4})\n\nMail your current passport to the address on your receipt page within 10 days. Expect your new passport in ${SPEEDS[speed].weeks}.`,
 		data: { code: receipt }
 	});
 	return { ok: true, code: receipt };
@@ -86,7 +102,7 @@ defineActions({
 	// Submit a renewal, trying again while the payment service is down (as a person would), up to five times.
 	'gov.renew': (ctx, a) => {
 		let r: Result<{ code: string }> = { ok: false, error: 'not tried' };
-		for (let i = 0; i < 5 && !r.ok; i++) r = submitRenewal(ctx, a.renewal as Renewal, a.card as CardInput);
+		for (let i = 0; i < 5 && !r.ok; i++) r = submitRenewal(ctx, a.renewal as Renewal, a.card as CardInput, isSpeed(a.speed) ? a.speed : 'routine');
 		return must(r, 'renewal');
 	}
 });

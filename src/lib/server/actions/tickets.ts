@@ -10,11 +10,21 @@ import { send } from './mail.ts';
 import { siteName, type Ctx } from '../ctx.ts';
 import { defineActions, must } from '../evals/registry.ts';
 import { added, defineAssertions, list } from '../evals/assertions.ts';
-import { SITES } from '../../sites.ts';
+import { SITES, type Site } from '../../sites.ts';
+import { charges, sum } from '../../pricing.ts';
 import { addMinutes, bySeat, clock, longDate, day, money } from '../../time.ts';
 
 // Per-ticket fees: the aggregator charges more for selling another chain's seats.
 export const FEE_CENTS: Record<string, number> = { aggregator: 250, chain: 150, arthouse: 100 };
+
+// What `quantity` tickets at the venue's `priceCents` come to on a site: the price it shows each (less a drip-pricing
+// site's advertised discount), then its fee lines. A site without its own pricing charges one fee per ticket, by kind.
+export function ticketCost(site: Site, priceCents: number, quantity: number) {
+	const unitCents = priceCents - (site.pricing?.discountCents ?? 0);
+	const subtotalCents = unitCents * quantity;
+	const lines = site.pricing ? charges(site.pricing, subtotalCents, quantity) : [{ label: 'Fees', cents: FEE_CENTS[site.kind ?? 'chain']! * quantity }];
+	return { unitCents, subtotalCents, lines, feeCents: sum(lines), totalCents: subtotalCents + sum(lines) };
+}
 export const MAX_SEATS = 10;
 
 // A card on file, a card typed in, or a hosted checkout that already charged one (it passes the last four digits).
@@ -83,9 +93,8 @@ export function purchase(ctx: Ctx, p: Purchase): Result<{ code: string; totalCen
 		last4 = checked.last4;
 	} else last4 = p.payment.last4;
 
-	const kind = SITES[p.site]?.kind ?? 'chain';
-	const subtotalCents = s.priceCents * quantity;
-	const feeCents = FEE_CENTS[kind]! * quantity;
+	const cost = ticketCost(SITES[p.site]!, s.priceCents, quantity);
+	const { subtotalCents, feeCents } = cost;
 	const venueDb = ctx.db(p.venue);
 	const before = venueDb.select({ n: count() }).from(orders).where(eq(orders.showtime, p.showtime)).get()!.n;
 	const order = {
@@ -125,7 +134,7 @@ export function purchase(ctx: Ctx, p: Purchase): Result<{ code: string; totalCen
 			`${longDate(day(s.startsAt))} at ${clock(s.startsAt)}`,
 			general ? `General admission: ${quantity} ticket${quantity > 1 ? 's' : ''}` : `Seats: ${seats.join(', ')}${s.room ? ` (${s.room.name})` : ''}`,
 			'',
-			`Tickets: ${money(subtotalCents)}  Fees: ${money(feeCents)}  Total: ${money(order.totalCents)}`,
+			[`Tickets: ${money(subtotalCents)}`, ...cost.lines.map((l) => `${l.label}: ${money(l.cents)}`), `Total: ${money(order.totalCents)}`].join('  '),
 			`Paid with card ending in ${last4}.`,
 			p.site !== p.venue ? `Sold by ${siteName(p.site)} for ${siteName(p.venue)}.` : ''
 		]
@@ -222,6 +231,12 @@ defineAssertions({
 		const rows = new Set(seats.map((x) => x[0]));
 		const nums = seats.map((x) => Number(x.slice(1))).sort((x, y) => x - y);
 		return rows.size === 1 && nums.every((n, i) => i === 0 || (n === nums[i - 1]! + 1 && !room.aisles.includes(nums[i - 1]!)));
+	},
+
+	// The seats of the run's one order at a site, sorted (null without exactly one).
+	order_seats: (_ctx, a, { made }) => {
+		const o = ordersAt(made, a.site);
+		return o.length === 1 ? list(o[0]!.seats).sort(bySeat) : null;
 	},
 
 	// The seats of the run's order at a site are all in these rows.

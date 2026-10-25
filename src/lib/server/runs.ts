@@ -1,7 +1,7 @@
 // A run is one attempt at a task: every site's database copied from the scenario's seeds, a clock, and a seed for
 // whatever the sites make up. Runs live on disk (runs/<id>/) so the site server and the control server share them.
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { closeDb, openDb } from './db.ts';
 import { code } from './rand.ts';
@@ -20,6 +20,8 @@ export interface Run {
 	createdAt: number;
 	offsetMs: number;
 	conditions?: Conditions;
+	// Pages ("site:/path" and under) whose loads are noted, for follow-ups that wait on them.
+	watch?: string[];
 }
 
 // How a run's sites behave, beyond the task: every response this much slower, and pages without
@@ -51,10 +53,26 @@ export function getRun(id: string): Run | undefined {
 
 const save = (run: Run) => writeFileSync(file(run.id), JSON.stringify(run, null, 2));
 
-export function createRun({ scenario, clock, seed, task, id, conditions }: { scenario: string; clock: string; seed?: string; task?: string; id?: string; conditions?: Conditions }): Run {
+export function createRun({
+	scenario,
+	clock,
+	seed,
+	task,
+	id,
+	conditions,
+	watch
+}: {
+	scenario: string;
+	clock: string;
+	seed?: string;
+	task?: string;
+	id?: string;
+	conditions?: Conditions;
+	watch?: string[];
+}): Run {
 	const from = join(SEEDS, scenario);
 	if (!existsSync(from)) throw new Error(`no seeds for scenario ${scenario} (run the seed script)`);
-	const run: Run = { id: id ?? `r${Date.now().toString(36)}${code(4, Math.random())}`.toLowerCase(), scenario, task, seed: seed ?? scenario, clock, createdAt: Date.now(), offsetMs: 0, ...(conditions && { conditions }) };
+	const run: Run = { id: id ?? `r${Date.now().toString(36)}${code(4, Math.random())}`.toLowerCase(), scenario, task, seed: seed ?? scenario, clock, createdAt: Date.now(), offsetMs: 0, ...(conditions && { conditions }), ...(watch?.length && { watch }) };
 	if (existsSync(dir(run.id))) deleteRun(run.id);
 	mkdirSync(dir(run.id), { recursive: true });
 	for (const f of readdirSync(from)) if (f.endsWith('.db')) copyFileSync(join(from, f), join(dir(run.id), f));
@@ -85,3 +103,15 @@ export function advance(run: Run, minutes: number) {
 	save(next);
 	return next;
 }
+
+// Page loads the run watches for, one "site:/path" a line. The site server writes them; the control server reads them.
+const visitsFile = (id: string) => join(dir(id), 'visits.log');
+// "tablenook:/book" covers "tablenook:/book" and "tablenook:/book/…", not "tablenook:/booking".
+const under = (w: string, at: string) => at === w || at.startsWith(w.endsWith('/') ? w : `${w}/`);
+
+export function noteVisit(run: Run, site: string, path: string) {
+	const at = `${site}:${path.replace(/\/__data\.json$/, '') || '/'}`;
+	if (run.watch?.some((w) => under(w, at))) appendFileSync(visitsFile(run.id), `${at}\n`);
+}
+
+export const visited = (run: Run, w: string) => existsSync(visitsFile(run.id)) && readFileSync(visitsFile(run.id), 'utf8').split('\n').some((at) => at && under(w, at));

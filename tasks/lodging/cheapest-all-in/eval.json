@@ -1,0 +1,13 @@
+{
+	"difficulty": "hard",
+	"sites": ["nookery", "roostable", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [{ "action": "lodging.book", "args": { "site": "roostable", "home": "kestrel-bay-1", "checkIn": "2026-03-20", "checkOut": "2026-03-22", "guests": 2, "card": 1 } }],
+		"assertions": [
+			{ "fn": "stays_at", "args": {}, "expect": ["roostable:kestrel-bay-1"], "message": "The cheapest all-in: Roostable's Driftwood Room, $227.80 (Nookery's cheapest headline comes to $307.02)" }
+		],
+		"answer": { "include": ["{code}", "227.80"] }
+	},
+	"tags": ["lodging", "hidden-fees", "drip-pricing", "compare-sites", "cheapest", "saved-card"]
+}

@@ -1,8 +1,9 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { home, isFree, nightsOf, price, save, saved, unsave } from '#lib/server/actions/lodging.ts';
+import { drips, home, isFree, nightsOf, price, save, saved, unsave } from '#lib/server/actions/lodging.ts';
 
 export const load = ({ locals, params, url }) => {
-	const h = home(locals.ctx, params.id);
+	const site = locals.site!.id;
+	const h = home(locals.ctx, site, params.id);
 	if (!h) error(404, 'Home not found');
 	const checkIn = url.searchParams.get('checkIn') ?? '';
 	const checkOut = url.searchParams.get('checkOut') ?? '';
@@ -15,9 +16,11 @@ export const load = ({ locals, params, url }) => {
 		checkOut,
 		guests,
 		nights: n,
-		free: dated ? isFree(locals.ctx, h.id, checkIn, checkOut) : undefined,
-		cost: n ? price(h, n) : undefined,
-		isSaved: saved(locals.ctx).has(h.id)
+		free: dated ? isFree(locals.ctx, site, h.id, checkIn, checkOut) : undefined,
+		// A drip-pricing site adds its fees on the last step only.
+		cost: n && !drips(site) ? price(site, h, n) : undefined,
+		drip: drips(site),
+		isSaved: saved(locals.ctx, site).has(h.id)
 	};
 };
 
@@ -29,12 +32,12 @@ const back = (url: URL) => {
 
 export const actions = {
 	save: async ({ locals, params, url }) => {
-		const r = save(locals.ctx, params.id);
+		const r = save(locals.ctx, locals.site!.id, params.id);
 		if (!r.ok) return fail(400, { error: r.error });
 		redirect(303, back(url));
 	},
 	unsave: async ({ locals, params, url }) => {
-		unsave(locals.ctx, params.id);
+		unsave(locals.ctx, locals.site!.id, params.id);
 		redirect(303, back(url));
 	}
 };

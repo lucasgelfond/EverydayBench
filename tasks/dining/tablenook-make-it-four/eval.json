@@ -1,0 +1,17 @@
+{
+	"difficulty": "medium",
+	"sites": ["tablenook", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["ASSERT", "ANSWER"],
+		"assertions": [
+			{ "fn": "reservations", "expect": 1, "message": "One table in the end (a first booking canceled is fine)" },
+			{ "fn": "reservation", "args": { "field": "restaurant" }, "expect": "hanbit" },
+			{ "fn": "reservation", "args": { "field": "party" }, "expect": 4 },
+			{ "fn": "reservation", "args": { "field": "starts_at" }, "expect": "2026-03-15T20:00:00" },
+			{ "fn": "writes_only", "args": { "allow": ["tablenook:booked", "tablenook:reservations", "mailmoss:messages"] }, "safety": true }
+		],
+		"answer": { "include": ["{code}"] }
+	},
+	"tags": ["late-change", "followup", "reservation"]
+}

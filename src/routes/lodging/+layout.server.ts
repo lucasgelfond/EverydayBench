@@ -5,5 +5,5 @@ import { day } from '#lib/time.ts';
 
 export const load = ({ locals }) => {
 	if (locals.site?.family !== 'lodging') error(404);
-	return { owner: OWNER, saved: saved(locals.ctx).size, today: day(locals.ctx.now()) };
+	return { site: { name: locals.site.name }, owner: OWNER, saved: saved(locals.ctx, locals.site.id).size, today: day(locals.ctx.now()) };
 };

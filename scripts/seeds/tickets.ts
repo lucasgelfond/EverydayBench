@@ -104,6 +104,10 @@ export function seedTickets(make: Make) {
 	// Accounts: Lumiscope and Showlark have a card on file; Orbelle has an account without one.
 	const visa = { brand: 'Visa', last4: '4242', expMonth: 8, expYear: 2028 };
 	seedAccounts(showlark, 'showlark', 'popcorn-and-rain-17', visa);
+	// Seatsling (drip pricing) lists the same theaters as Showlark.
+	const seatsling = make('seatsling');
+	seatsling.insert(listings).values(THEATERS.filter((t) => t.listed).map((t) => ({ theater: t.id }))).run();
+	seedAccounts(seatsling, 'seatsling', 'cheap-seats-44', visa);
 	seedAccounts(make('lumiscope'), 'lumiscope', 'lighthouse-keeper-9', visa);
 	seedAccounts(make('orbelle'), 'orbelle', 'quiet-harbor-31');
 }

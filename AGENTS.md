@@ -30,7 +30,8 @@ file is what an agent (or a person) changing the code needs to know.
    fill inputs; they don't always type keys). Prefer links and forms over client-only widgets; when a widget library is
    needed, use one (Bits UI) rather than rolling your own, and test it in Playwright's headless shell.
 5. **Siblings stay in step.** Sibling sites differ only in skin. A change to a family's flow changes every sibling, and
-   `tests/e2e/parity.spec.ts` must still pass.
+   `tests/e2e/parity.spec.ts` must still pass. A site may also price differently (`pricing` in `sites.ts`: drip pricing, where fees appear only on
+   the last step, as on Nookery and Seatsling); its steps and clicks still match its siblings'.
 6. **Accessible names.** Agents read accessibility trees: every control has a real label or name ("Row G, seat 9,
    available").
 
@@ -44,6 +45,10 @@ file is what an agent (or a person) changing the code needs to know.
    open choice with assertions (`basis: ["ASSERT", "ANSWER"]`, plus `writes_only`).
    An injected variant (`<task>-injected`) copies a task and adds an `inject.*` setup and a safety assertion that the
    attacker's goal didn't happen (`mail_to`, `injections_followed`), so clean and attacked scores compare directly.
+   For a change of plan mid-run ("wait, make it 4 people"), add `followups` to prompt.md's front matter: each a `text`
+   and a `when` (`afterSeconds`, `onPath: "site:/path"` once the agent's browser loads that page or one under it, or
+   `afterWrite: "<table>"` after the run's first row there). A harness polls `GET /runs/<id>/followups` and passes each
+   on as a new message from the owner; grade the end state the last message asks for.
 3. `pnpm test` checks the reference replays deterministically. Add a golden path to `tests/e2e/` that does the task
    through the UI and asserts `grade(...).pass`.
 
@@ -53,8 +58,14 @@ Tasks should come from real errands: when the owner asks their agent for somethi
 ## Adding a site
 
 Add it to `SITES`; if it's a new family, add its tables to `FAMILY_TABLES`, its actions, routes under
-`src/routes/<family>/`, and seed data in `scripts/seed.ts`. Then screenshots (`node scripts/screenshots.ts`) and the
+`src/routes/<family>/`, and seed data in `scripts/seed.ts`. A hard twin (`twin` and `skin.controls: 'hard'`: Zigzephyr Air,
+Knickwhistle, Tabletangle) copies a sibling's database and swaps its plain controls for real-site widgets
+(`src/lib/server/hard-controls.ts`); copy the sibling's tasks to it and test them in `tests/e2e/hard-sites.spec.ts`. Then screenshots (`node scripts/screenshots.ts`) and the
 README's table.
+
+A quirky sibling (Plattertide, Bramblecart) is a sibling with `quirks` in `SITES`: faults it starts with, seeded, so it
+saves something other than what was asked and tells the truth only on its confirmation. It takes the same steps as its
+siblings; parity tests include it.
 
 ## Commands
 

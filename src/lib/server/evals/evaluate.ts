@@ -97,7 +97,8 @@ export function expectedState(task: Task, ignore: string[]) {
 
 // A task's run, set up: the world copied and the setup actions applied.
 export function startTask(task: Task, id?: string, conditions?: Conditions) {
-	const run = createRun({ scenario: task.initial.scenario, clock: clockOf(task), seed: task.initial.seed, task: task.id, id, conditions });
+	const watch = task.followups.flatMap((f) => ('onPath' in f.when ? [f.when.onPath] : []));
+	const run = createRun({ scenario: task.initial.scenario, clock: clockOf(task), seed: task.initial.seed, task: task.id, id, conditions, watch });
 	const ctx = ctxFor(run);
 	for (const c of task.initial.setup) call(ctx, c.action, c.args);
 	return run;
@@ -165,6 +166,12 @@ export function grade(task: Task, runId: string, report = ''): Graded {
 	};
 	const progress = task.evaluation.basis.reduce((n, b) => n + shares[b], 0) / task.evaluation.basis.length;
 	return { reward: pass ? 1 : 0, pass, progress: Math.round(progress * 100) / 100, parts, diff, assertions, answer: { missing, forbidden } };
+}
+
+// What a run has changed so far, against the world its task started in.
+export function changes(task: Task, run: Run): Diff[] {
+	const ignore = [...DEFAULT_IGNORE, ...task.evaluation.ignore];
+	return compare(snapshot(run, ignore), worlds(task, ignore).initial);
 }
 
 // The world a task should end in, and the one it starts in (to see what a run changed). Both are the same every time

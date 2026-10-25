@@ -24,7 +24,7 @@
 		</fieldset>
 		{#if payment === 'card'}<CardFields values={form?.values ?? {}} />{/if}
 		{#if form?.error}<p class="font-semibold text-red-600" role="alert">{form.error}</p>{/if}
-		<button class="btn w-full">{data.words.purchase} · {money(data.subtotalCents + data.feeCents)}</button>
+		<button class="btn w-full">{data.words.purchase} · {money(data.totalCents)}</button>
 	</form>
 	<aside class="card h-fit text-sm">
 		<h2 class="mb-2 font-semibold">{data.film}</h2>
@@ -33,8 +33,8 @@
 		<p class="mt-2">Seats: <strong>{data.seats.join(', ')}</strong></p>
 		<dl class="mt-3 space-y-1 border-t border-current/10 pt-3">
 			<div class="flex justify-between"><dt>Tickets ({data.seats.length})</dt><dd>{money(data.subtotalCents)}</dd></div>
-			<div class="flex justify-between"><dt>Fees</dt><dd>{money(data.feeCents)}</dd></div>
-			<div class="flex justify-between font-semibold"><dt>Total</dt><dd>{money(data.subtotalCents + data.feeCents)}</dd></div>
+			{#each data.lines as l (l.label)}<div class="flex justify-between"><dt>{l.label}</dt><dd>{money(l.cents)}</dd></div>{/each}
+			<div class="flex justify-between font-semibold"><dt>Total</dt><dd>{money(data.totalCents)}</dd></div>
 		</dl>
 	</aside>
 </div>

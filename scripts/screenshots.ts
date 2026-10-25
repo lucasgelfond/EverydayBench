@@ -1,5 +1,5 @@
 // Screenshots of every site for the README (public/screenshots/), from a fresh run, against a running server.
-//   pnpm dev (or pnpm start), then: node scripts/screenshots.ts
+//   pnpm dev (or pnpm start), then: node scripts/screenshots.ts [name prefix…] (only those, e.g. "gridwhistle")
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 import { createRun, deleteRun } from '../src/lib/server/runs.ts';
@@ -41,14 +41,19 @@ const shots: [string, string][] = [
 	['daybrella', at('daybrella', '/')],
 	['roostable-search', at('roostable', '/?city=Port+Alder&checkIn=2026-04-01&checkOut=2026-04-06&guests=4&bedrooms=2')],
 	['roostable-home', at('roostable', '/homes/kestrel-bay-6?checkIn=2026-03-20&checkOut=2026-03-22&guests=2')],
-	['sweatlantis-schedule', at('sweatlantis', '/schedule?location=eastgate&date=2026-03-15')]
+	['nookery-book', at('nookery', '/book?home=nookery-kb-1&checkIn=2026-03-20&checkOut=2026-03-22&guests=2')],
+	['seatsling-checkout', at('seatsling', '/checkout?showtime=lumiscope-midtown-velocity-nine-20260315-2030&seats=G7,G8')],
+	['sweatlantis-schedule', at('sweatlantis', '/schedule?location=eastgate&date=2026-03-15')],
+	['gridwhistle-sheet', at('gridwhistle', '/w/apartment')],
+	['thriftwell-account', at('thriftwell', '/a/visa?month=2026-02')]
 ];
+const only = process.argv.slice(2);
 
 const browser = await chromium.launch({ args: ['--host-resolver-rules=MAP *.everydaybench.test 127.0.0.1'] });
 const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
 try {
 	await page.goto(`${at('mailmoss', '/')}?everydaybench_run=${run.id}`);
-	for (const [name, url] of shots) {
+	for (const [name, url] of shots.filter(([n]) => !only.length || only.some((p) => n.startsWith(p)))) {
 		const res = await page.goto(url);
 		if (!res?.ok()) throw new Error(`${name}: ${res?.status()} at ${url}`);
 		await page.waitForLoadState('networkidle');

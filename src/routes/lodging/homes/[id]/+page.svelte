@@ -28,6 +28,7 @@
 	<form action="/book" class="card h-fit space-y-3">
 		<input type="hidden" name="home" value={h.id} />
 		<p><strong class="text-xl">{money(h.nightlyCents)}</strong> night</p>
+		{#if data.drip}<p class="text-xs text-muted">Fees and taxes are calculated at checkout.</p>{/if}
 		<label class="label">Check in <input class="field" type="date" name="checkIn" required defaultValue={data.checkIn} /></label>
 		<label class="label">Check out <input class="field" type="date" name="checkOut" required defaultValue={data.checkOut} /></label>
 		<label class="label">Guests <input class="field" type="number" min="1" max={h.guests} name="guests" defaultValue={data.guests} /></label>
@@ -36,8 +37,7 @@
 		{:else if data.cost}
 			<dl class="space-y-1 border-t border-current/10 pt-2 text-sm">
 				<div class="flex justify-between"><dt>{money(h.nightlyCents)} × {data.nights} nights</dt><dd>{money(data.cost.subtotal)}</dd></div>
-				<div class="flex justify-between"><dt>Cleaning fee</dt><dd>{money(data.cost.cleaning)}</dd></div>
-				<div class="flex justify-between"><dt>Service fee</dt><dd>{money(data.cost.service)}</dd></div>
+				{#each data.cost.lines as l (l.label)}<div class="flex justify-between"><dt>{l.label}</dt><dd>{money(l.cents)}</dd></div>{/each}
 				<div class="flex justify-between font-semibold"><dt>Total</dt><dd>{money(data.cost.total)}</dd></div>
 			</dl>
 		{/if}

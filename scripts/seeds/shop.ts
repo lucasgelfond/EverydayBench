@@ -81,10 +81,14 @@ const RESTAURANTS: M[] = [
 	]]
 ];
 
-function seedAccount(db: Db, password: string, card: { brand: string; last4: string; expMonth: number; expYear: number }) {
+const HOME = { line1: '18 Linden St, Apt 3', city: 'Brookfield', zip: '10001' };
+// Where the owner lived before: still saved on some accounts, first.
+const OLD_HOME = { line1: '402 Quarry Rd, Apt 5B', city: 'Brookfield', zip: '10004' };
+
+function seedAccount(db: Db, password: string, card: { brand: string; last4: string; expMonth: number; expYear: number }, homes = [HOME]) {
 	const [a] = db.insert(accounts).values({ email: OWNER.email, name: OWNER.name, password: passwordHash(OWNER.email, password) }).returning().all();
 	db.insert(cards).values({ account: a!.id, ...card }).run();
-	db.insert(addresses).values({ account: a!.id, name: OWNER.name, line1: '18 Linden St, Apt 3', city: 'Brookfield', zip: '10001' }).run();
+	db.insert(addresses).values(homes.map((h) => ({ account: a!.id, name: OWNER.name, ...h }))).run();
 }
 
 const row = ([id, name, category, priceCents, rating, reviews, description, inStock = true]: P, merchant: string | null = null) => ({ id, merchant, name, category, priceCents, rating, reviews, description, inStock });
@@ -95,6 +99,10 @@ export function seedShop(make: Make) {
 		db.insert(products).values(CATALOG.map((p) => row(p))).run();
 		seedAccount(db, password, { brand: 'Visa', last4: '4242', expMonth: 8, expYear: 2028 });
 	}
+	// Bramblecart: the same catalog; the account still has the old address, saved first, so checkout picks it.
+	const bramblecart = make('bramblecart');
+	bramblecart.insert(products).values(CATALOG.map((p) => row(p))).run();
+	seedAccount(bramblecart, 'thorny-basket-31', { brand: 'Visa', last4: '4242', expMonth: 8, expYear: 2028 }, [OLD_HOME, HOME]);
 	const forkfly = make('forkfly');
 	for (const [id, name, cuisine, area, address, rating, reviews, deliveryFeeCents, etaMinutes, menu] of RESTAURANTS) {
 		forkfly.insert(merchants).values({ id, name, cuisine, area, address, rating, reviews, deliveryFeeCents, etaMinutes }).run();

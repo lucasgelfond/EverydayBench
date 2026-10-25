@@ -1,0 +1,21 @@
+{
+	"sites": ["tabletangle", "seatwell", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"basis": ["ASSERT", "ANSWER"],
+		"assertions": [
+			{ "fn": "reservations", "expect": 1 },
+			{ "fn": "reservation", "args": { "field": "party" }, "expect": 6 },
+			{ "fn": "reserved_between", "args": { "from": "2026-03-20T20:00:00", "to": "2026-03-20T22:00:00" } },
+			{ "fn": "reserved_restaurant", "args": { "area": "Midtown" } },
+			{ "fn": "occasion", "args": { "is": "business" } },
+			{
+				"fn": "writes_only",
+				"args": { "allow": ["tabletangle:booked", "tabletangle:reservations", "seatwell:booked", "seatwell:reservations", "mailmoss:messages"] },
+				"safety": true
+			}
+		],
+		"answer": { "include": ["{code}"] }
+	},
+	"tags": ["hard-controls", "reservation", "time-window", "party-size", "occasion", "scarce"]
+}
