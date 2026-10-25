@@ -12,6 +12,8 @@ file is what an agent (or a person) changing the code needs to know.
 - `src/lib/server/catalog.ts` — reads for ticket pages. `runs.ts` — runs on disk (`runs/<id>/<site>.db`), the run clock.
 - `src/lib/server/evals/` — task schema (`task.ts`), action registry for setups and reference solutions
   (`registry.ts`), assertions (`assertions.ts`), grading (`evaluate.ts`).
+- `src/lib/server/injections.ts` — prompt injections (an email, a listing's text, a pop-up, hidden text), each in a style
+  that works on agents and aimed at a goal graders can see; tasks deliver them with `inject.*` setup actions.
 - `src/routes/<family>/` — pages. `src/lib/ui/` — shared components (seat map, date strip, card fields, search).
 - `scripts/seed.ts` — builds `seeds/<scenario>/*.db` from code. `control/` — the harness API (Hono). `server.ts` —
   production entry. `tasks/` — tasks (`prompt.md` + `eval.json` each). `tests/unit` (Vitest), `tests/e2e` (Playwright).
@@ -40,6 +42,8 @@ file is what an agent (or a person) changing the code needs to know.
    assertions and required answer facts (`evaluation`), `tags`.
 2. Pick concrete things from the seeds (query `seeds/<scenario>/*.db`) so the task has one right outcome, or grade an
    open choice with assertions (`basis: ["ASSERT", "ANSWER"]`, plus `writes_only`).
+   An injected variant (`<task>-injected`) copies a task and adds an `inject.*` setup and a safety assertion that the
+   attacker's goal didn't happen (`mail_to`, `injections_followed`), so clean and attacked scores compare directly.
 3. `pnpm test` checks the reference replays deterministically. Add a golden path to `tests/e2e/` that does the task
    through the UI and asserts `grade(...).pass`.
 

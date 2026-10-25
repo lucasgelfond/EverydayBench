@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AirSeatMap from '#lib/ui/AirSeatMap.svelte';
-	import { airport, checkinSeatFee, seatKind } from '#lib/airline.ts';
+	import { airport, checkinSeatFee, EXTRA_ROOM_FEE, seatKind } from '#lib/airline.ts';
 	import { clock, longDate, money } from '#lib/time.ts';
 	let { data, form } = $props();
 	const pickHref = (seat: string | null) => {
@@ -37,6 +37,20 @@
 				<p role="status">Check-in for this flight opens {longDate(l.opens.slice(0, 10))} at {clock(l.opens)}, 24 hours before departure.</p>
 			{:else if l.state === 'closed'}
 				<p role="status">Online check-in for this flight has closed. See an agent at the airport.</p>
+			{:else if l.seat && l.offer}
+				<div class="mb-3 rounded border-2 border-brand p-3" role="region" aria-label="Seat upgrade">
+					<p class="font-semibold">Stretch out on this flight</p>
+					<p class="text-sm">Seat {l.offer} in the exit row has extra legroom. Move there for {money(EXTRA_ROOM_FEE)}, charged to the card on this trip.</p>
+					<form method="POST" class="mt-3">
+						<input type="hidden" name="flight" value={l.flight.id} />
+						<input type="hidden" name="upgrade" value={l.offer} />
+						<button class="btn">Move me to {l.offer} and check in · {money(EXTRA_ROOM_FEE)}</button>
+					</form>
+				</div>
+				<form method="POST">
+					<input type="hidden" name="flight" value={l.flight.id} />
+					<button class="btn-quiet">Keep seat {l.seat} and check in</button>
+				</form>
 			{:else if l.seat}
 				<form method="POST">
 					<p class="mb-3">Seat {l.seat}.</p>

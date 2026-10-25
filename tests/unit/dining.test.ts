@@ -90,3 +90,18 @@ test('Ember Ledger tonight: only 9:30 for two, on both sites; reporting it passe
 	expect(attempt(id, () => undefined, 'They’re fully booked tonight.').pass).toBe(false);
 	expect(attempt(id, book('seatwell', 'ember-ledger', '2026-03-14T21:30:00', 2), 'Booked you at 9:30.').pass).toBe(false);
 });
+
+test('Saturday for four: Quillon at 7:30 and Ember Ledger at 8:30 in the window; reporting both passes, booking either fails', slow, () => {
+	const id = 'dining/find-saturday-four';
+	const run = startTask(tasks.get(id)!);
+	try {
+		const inWindow = (site: string, r: string) => openTimes(ctxFor(run), site, r, '2026-03-21', 4).filter((t) => t >= '2026-03-21T19:00' && t <= '2026-03-21T21:00:00');
+		expect(inWindow('tablenook', 'brasserie-quillon')).toEqual(['2026-03-21T19:30:00']);
+		for (const site of ['tablenook', 'seatwell']) expect(inWindow(site, 'ember-ledger')).toEqual(['2026-03-21T20:30:00']);
+	} finally {
+		deleteRun(run.id);
+	}
+	expect(attempt(id, () => undefined, 'Brasserie Quillon has 7:30 PM and Ember Ledger has 8:30 PM. Both charge $50 a person to cancel late.').pass).toBe(true);
+	expect(attempt(id, () => undefined, 'Brasserie Quillon has a table at 7:30.').pass).toBe(false);
+	expect(attempt(id, book('tablenook', 'brasserie-quillon', '2026-03-21T19:30:00', 4), 'Booked Quillon at 7:30; Ember Ledger had 8:30.').pass).toBe(false);
+});

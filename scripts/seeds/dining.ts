@@ -25,15 +25,15 @@ export const RESTAURANTS: R[] = [
 	{ id: 'casa-ondina', name: 'Casa Ondina', cuisine: 'Mexican', area: 'Eastgate', address: '204 Eastgate Blvd', rating: 3.8, reviews: 455, price: 2, lunch: true, tables: BIG, on: ['tablenook'], blurb: 'Coastal Mexican: aguachiles, tlayudas, mezcal.' },
 	{ id: 'forno-ventisette', name: 'Forno Ventisette', cuisine: 'Italian', area: 'Midtown', address: '27 Union Sq', rating: 4.4, reviews: 967, price: 2, lunch: true, tables: SMALL, on: ['tablenook'], blurb: 'Neapolitan pizza from a 900-degree oven.' },
 	{ id: 'pergola-minuta', name: 'Pergola Minuta', cuisine: 'Italian', area: 'Riverside', address: '3 River Walk', rating: 3.0, reviews: 210, price: 2, lunch: true, tables: SMALL, on: both, blurb: 'A small trattoria with a covered patio by the water.' },
-	{ id: 'brasserie-quillon', name: 'Brasserie Quillon', cuisine: 'French', area: 'Old Mill', address: '18 Millrace Ln', rating: 4.7, reviews: 640, price: 4, lunch: false, tables: GROUP, on: ['tablenook'], blurb: 'Steak frites, duck, and a zinc bar under the old mill wheel.' },
+	{ id: 'brasserie-quillon', name: 'Brasserie Quillon', cuisine: 'French', area: 'Old Mill', address: '18 Millrace Ln', rating: 4.7, reviews: 640, price: 4, feeCents: 5000, lunch: false, tables: GROUP, on: ['tablenook'], blurb: 'Steak frites, duck, and a zinc bar under the old mill wheel.' },
 	{ id: 'tamarind-tram', name: 'Tamarind Tram', cuisine: 'Indian', area: 'Northside', address: '940 Alder Ave', rating: 4.2, reviews: 530, price: 2, lunch: true, tables: BIG, on: both, blurb: 'Railway-canteen curries and dosas.' },
-	{ id: 'ember-ledger', name: 'Ember Ledger Steakhouse', cuisine: 'Steakhouse', area: 'Midtown', address: '1 Exchange Pl', rating: 4.5, reviews: 1105, price: 4, lunch: false, tables: GROUP, on: both, blurb: 'Dry-aged steaks and private booths for business dinners.' },
+	{ id: 'ember-ledger', name: 'Ember Ledger Steakhouse', cuisine: 'Steakhouse', area: 'Midtown', address: '1 Exchange Pl', rating: 4.5, reviews: 1105, price: 4, feeCents: 5000, lunch: false, tables: GROUP, on: both, blurb: 'Dry-aged steaks and private booths for business dinners.' },
 	{ id: 'basil-lattice', name: 'Basil Lattice', cuisine: 'Thai', area: 'Riverside', address: '55 River Walk', rating: 4.4, reviews: 388, price: 2, lunch: true, tables: SMALL, on: both, blurb: 'Northern Thai, khao soi and grilled sausage.' },
 	{ id: 'sprigwood', name: 'Sprigwood Kitchen', cuisine: 'Vegetarian', area: 'Riverside', address: '8 Ferry St', rating: 2.7, reviews: 96, price: 1, lunch: true, tables: SMALL, on: both, blurb: 'Grain bowls and seasonal plates.' },
 	{ id: 'hanbit', name: 'Hanbit Grill House', cuisine: 'Korean', area: 'Eastgate', address: '310 Eastgate Blvd', rating: 4.3, reviews: 702, price: 2, lunch: false, tables: GROUP, on: both, blurb: 'Tabletop charcoal grills, banchan, soju.' },
 	{ id: 'olive-steps', name: 'Olive Steps', cuisine: 'Mediterranean', area: 'Harborview', address: '40 Lighthouse Pl', rating: 3.6, reviews: 284, price: 2, lunch: true, tables: SMALL, on: both, blurb: 'Mezze and grilled fish on a terrace over the harbor.' },
 	{ id: 'quarter-moon', name: 'Quarter Moon Diner', cuisine: 'American', area: 'Northside', address: '1450 Alder Ave', rating: 3.4, reviews: 1540, price: 1, lunch: true, tables: BIG, on: both, blurb: 'Pancakes all day, pie all night.' },
-	{ id: 'kumo-counter', name: 'Kumo Counter', cuisine: 'Japanese', area: 'Old Mill', address: '6 Millrace Ln', rating: 4.8, reviews: 420, price: 4, lunch: false, tables: [2, 2, 2, 4], on: both, blurb: 'A ten-seat omakase counter.' },
+	{ id: 'kumo-counter', name: 'Kumo Counter', cuisine: 'Japanese', area: 'Old Mill', address: '6 Millrace Ln', rating: 4.8, reviews: 420, price: 4, feeCents: 7500, lunch: false, tables: [2, 2, 2, 4], on: both, blurb: 'A ten-seat omakase counter.' },
 	{ id: 'fiorellino', name: 'Trattoria Fiorellino', cuisine: 'Italian', area: 'Northside', address: '1012 Alder Ave', rating: 4.0, reviews: 830, price: 2, lunch: false, tables: BIG, on: both, blurb: 'Fresh pasta and a nightly roast. Dinner only.' },
 	{ id: 'copperline', name: 'Copperline Tavern', cuisine: 'American', area: 'Midtown', address: '220 Grand St', rating: 3.9, reviews: 1022, price: 2, lunch: true, tables: BIG, on: both, blurb: 'Burgers, oysters and a big back room for groups.' },
 	{ id: 'petit-sillon', name: 'Petit Sillon', cuisine: 'French', area: 'Riverside', address: '21 Ferry St', rating: 3.9, reviews: 260, price: 3, lunch: false, tables: SMALL, on: ['seatwell'], blurb: 'A bistro of twelve tables and a chalkboard menu.' },
@@ -109,6 +109,15 @@ export function seedDining(make: Make) {
 	for (const db of [tablenook, seatwell]) {
 		fix(db, 'ember-ledger', at(START, '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '22:00'), 1, 'full');
 		fix(db, 'ember-ledger', at(START, '21:30'), 2, 'free');
+	}
+	// Saturday the 21st, 7 to 9 PM, for four: Brasserie Quillon has 7:30, Ember Ledger 8:30 (on both sites), nothing else.
+	const saturday = addDays(START, 7);
+	const evening = at(saturday, '19:00', '19:30', '20:00', '20:30', '21:00');
+	fix(tablenook, 'brasserie-quillon', evening, 1, 'full');
+	fix(tablenook, 'brasserie-quillon', at(saturday, '19:30'), 4, 'free');
+	for (const db of [tablenook, seatwell]) {
+		fix(db, 'ember-ledger', evening, 1, 'full');
+		fix(db, 'ember-ledger', at(saturday, '20:30'), 4, 'free');
 	}
 	// Thursday the 19th at Vellutina: a table for five or six at 7:30, none at 7 or 8.
 	const thursday = addDays(START, 5);

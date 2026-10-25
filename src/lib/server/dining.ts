@@ -3,7 +3,7 @@
 
 import { asc } from 'drizzle-orm';
 import { restaurants } from './schema.ts';
-import { MAX_PARTY, openTimes, type Restaurant } from './actions/dining.ts';
+import { feePolicy, MAX_PARTY, openTimes, type Restaurant } from './actions/dining.ts';
 import { addDays, clock, day, shortDate, toMs } from '../time.ts';
 import type { Ctx } from './ctx.ts';
 
@@ -54,4 +54,4 @@ export function search(ctx: Ctx, site: string, q: Query) {
 		}));
 }
 
-export const card = ({ id, name, cuisine, area, address, rating, reviews, price, blurb }: Restaurant) => ({ id, name, cuisine, area, address, rating, reviews, price, blurb });
+export const card = ({ id, name, cuisine, area, address, rating, reviews, price, blurb, feeCents }: Restaurant) => ({ id, name, cuisine, area, address, rating, reviews, price, blurb, fee: feeCents ? feePolicy(feeCents) : null });

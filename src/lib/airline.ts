@@ -2,6 +2,8 @@
 // place on any of them: Business in rows 1-3 (two and two), Premium Economy in 4-7 and Economy from 8 (three and
 // three), exits at rows 14 and 15. A and F are windows, C and D aisles, B and E middles.
 
+import { addMinutes } from './time.ts';
+
 export const AIRPORTS: Record<string, string> = {
 	AUS: 'Austin',
 	BOI: 'Boise',
@@ -82,6 +84,20 @@ export const parseLeg = (v: string | null) => {
 // good for a year.
 export const refundable = (fares: Fare[]) => fares.every((f) => f === 'premium' || f === 'business');
 export const CREDIT_MONTHS = 12;
+// Canceling for credit is free until a week before the first flight; after that, this fee comes off the credit.
+export const CANCEL_FREE_DAYS = 7;
+export const CANCEL_FEE = 9900;
+// What canceling a trip that costs `totalCents` and first departs at `departsAt` gives back at `now`, and until when
+// it's free.
+export function cancelTerms(totalCents: number, departsAt: string, now: string) {
+	const freeUntil = addMinutes(departsAt, -CANCEL_FREE_DAYS * 24 * 60);
+	const laterFeeCents = Math.min(CANCEL_FEE, totalCents);
+	const feeCents = now < freeUntil ? 0 : laterFeeCents;
+	return { freeUntil, feeCents, creditCents: totalCents - feeCents, laterFeeCents, laterCents: totalCents - laterFeeCents };
+}
+
+// At check-in, a passenger who already has an Economy seat is offered an exit-row seat with more legroom, for a fee.
+export const EXTRA_ROOM_FEE = 4500;
 
 // The support chat's choices: what it helps with (only Wi-Fi, for now) and what went wrong with it.
 export const CHAT_TOPICS = { wifi: 'Wi-Fi or entertainment', bags: 'Bags', change: 'Changing a trip' } as const;

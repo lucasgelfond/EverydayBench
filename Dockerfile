@@ -2,6 +2,8 @@
 #   docker build -t everydaybench . && docker run -p 8700:8700 -p 127.0.0.1:8701:8701 everydaybench
 FROM node:22-slim AS build
 WORKDIR /app
+# better-sqlite3 compiles itself where it has no prebuilt binary (it doesn't for this Node on arm64).
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile

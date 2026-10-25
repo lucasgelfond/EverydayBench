@@ -9,7 +9,7 @@ import { siteName, type Ctx } from '../ctx.ts';
 import { defineActions, must } from '../evals/registry.ts';
 import { CONFIRMATIONS, defineAssertions } from '../evals/assertions.ts';
 import type { Diff } from '../evals/evaluate.ts';
-import { clock, day, longDate } from '../../time.ts';
+import { clock, day, longDate, money } from '../../time.ts';
 import type { Result } from './tickets.ts';
 
 CONFIRMATIONS.add('reservations');
@@ -18,6 +18,8 @@ export const MAX_PARTY = 10;
 export const OCCASIONS: Record<string, string> = { '': 'None', birthday: 'Birthday', anniversary: 'Anniversary', business: 'Business meal', date: 'Date night', special: 'Special occasion' };
 
 export type Restaurant = typeof restaurants.$inferSelect;
+
+export const feePolicy = (cents: number) => `Cancellation policy: ${money(cents)} per person for a no-show or a cancellation within 24 hours.`;
 
 export const restaurantAt = (ctx: Ctx, site: string, id: string) => ctx.db(site).select().from(restaurants).where(eq(restaurants.id, id)).get();
 
@@ -103,6 +105,7 @@ export function reserve(ctx: Ctx, b: Booking): Result<{ code: string }> {
 			`${r.address} (${r.area})`,
 			`${longDate(day(b.startsAt))} at ${clock(b.startsAt)}, party of ${party}`,
 			occasion ? `Occasion: ${OCCASIONS[occasion]}` : null,
+			r.feeCents ? feePolicy(r.feeCents) : null,
 			row.notes ? `Requests: ${row.notes}` : null,
 			'',
 			b.site === b.restaurant ? 'We look forward to seeing you.' : `Booked through ${siteName(b.site)}.`

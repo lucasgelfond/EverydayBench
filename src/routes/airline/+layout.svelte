@@ -11,6 +11,7 @@
 		<nav aria-label="Main" class="flex flex-1 items-center gap-5 text-sm {centered ? 'justify-center' : ''}">
 			<a href="/">Book</a>
 			<a href="/check-in">Check in</a>
+			<a href="/trips">Manage trip</a>
 			<a href="/account">My trips</a>
 			<a href="/support">Help</a>
 			<span class="flex-1"></span>

@@ -12,3 +12,4 @@ import './actions/faults.ts';
 import './actions/cloud.ts';
 import './actions/gov.ts';
 import './actions/portal.ts';
+import './actions/inject.ts';

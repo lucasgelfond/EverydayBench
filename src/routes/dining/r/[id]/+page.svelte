@@ -11,6 +11,7 @@
 		<RestaurantMeta restaurant={r} />
 		<p class="mt-1">{r.blurb}</p>
 		<p class="text-sm text-muted">{r.address}</p>
+		{#if r.fee}<p class="mt-1 text-sm font-semibold">{r.fee}</p>{/if}
 	</header>
 	<form method="GET" class="flex flex-wrap items-end gap-3">
 		<label class="label">Date

@@ -1,6 +1,7 @@
 {
 	"name": "everydaybench",
 	"private": true,
+	"packageManager": "pnpm@10.29.1",
 	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
