@@ -1,0 +1,50 @@
+# The sandbox for each sample: the agent's browser (default) and EverydayBench, on a network with no way out. The sites
+# are reached by their own names (an alias per site, as listed in src/lib/sites.ts); the control port stays on
+# EverydayBench's loopback, where only the scorer (through docker exec) reaches it.
+services:
+  default:
+    build: .
+    init: true
+    networks: [sites]
+  everydaybench:
+    image: everydaybench
+    environment:
+      EVERYDAYBENCH_CONTROL_HOST: 127.0.0.1
+    networks:
+      sites:
+        aliases:
+          - showlark.everydaybench.test
+          - lumiscope.everydaybench.test
+          - orbelle.everydaybench.test
+          - brightreel.everydaybench.test
+          - seatsling.everydaybench.test
+          - owlbox.everydaybench.test
+          - mailmoss.everydaybench.test
+          - tallypay.everydaybench.test
+          - skyhollow.everydaybench.test
+          - larkspan.everydaybench.test
+          - kettlewick.everydaybench.test
+          - parcelpine.everydaybench.test
+          - bramblecart.everydaybench.test
+          - forkfly.everydaybench.test
+          - tablenook.everydaybench.test
+          - seatwell.everydaybench.test
+          - plattertide.everydaybench.test
+          - vellutina.everydaybench.test
+          - daybrella.everydaybench.test
+          - roostable.everydaybench.test
+          - nookery.everydaybench.test
+          - sweatlantis.everydaybench.test
+          - cloudpail.everydaybench.test
+          - voltbarrow.everydaybench.test
+          - swiftgate.everydaybench.test
+          - fernwick.everydaybench.test
+          - receiptacle.everydaybench.test
+          - gridwhistle.everydaybench.test
+          - thriftwell.everydaybench.test
+          - zigzephyr.everydaybench.test
+          - knickwhistle.everydaybench.test
+          - tabletangle.everydaybench.test
+networks:
+  sites:
+    internal: true

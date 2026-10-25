@@ -32,3 +32,6 @@ PLAN.md
 /.test
 
 .vscode
+logs/
+__pycache__/
+*.egg-info/
