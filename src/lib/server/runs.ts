@@ -80,9 +80,15 @@ export function createRun({
 	return run;
 }
 
-export function deleteRun(id: string) {
+// Closes a run's open databases, keeping its files.
+export function closeRun(id: string) {
 	if (!existsSync(dir(id))) return;
 	for (const f of readdirSync(dir(id))) if (f.endsWith('.db')) closeDb(join(dir(id), f));
+}
+
+export function deleteRun(id: string) {
+	if (!existsSync(dir(id))) return;
+	closeRun(id);
 	rmSync(dir(id), { recursive: true, force: true });
 	cache.delete(id);
 }
