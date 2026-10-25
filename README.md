@@ -18,3 +18,6 @@ that agents would:
 
 The sites are each on a hostname of one server, i.e. `showlark.everydaybench.test`, `lumiscope.everydaybench.test`. Each runs on its
 own, isolated SQLite database, so we can assert that actions verifiably took place.
+
+Some sites are hard twins of a sibling (Zigzephyr Air, Knickwhistle, Tabletangle): the same data and tasks, with the
+controls real sites make hard to click, like custom dropdowns, calendar-only dates and slide-to-confirm buttons.

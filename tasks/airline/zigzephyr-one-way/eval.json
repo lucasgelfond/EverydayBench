@@ -1,0 +1,23 @@
+{
+	"sites": ["zigzephyr", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [
+			{
+				"action": "airline.book",
+				"args": {
+					"site": "zigzephyr",
+					"legs": [{ "flight": "skyhollow-sh106-20260320", "fare": "economy" }],
+					"first": "Sam",
+					"last": "Rivera",
+					"birthDate": "1991-06-02",
+					"email": "sam@mailmoss.test",
+					"account": 1,
+					"payment": { "kind": "saved", "card": 1 }
+				}
+			}
+		],
+		"assertions": [{ "fn": "trip_reported", "args": { "site": "zigzephyr" } }]
+	},
+	"tags": ["hard-controls", "one-way", "sign-in", "saved-card", "passenger-details"]
+}

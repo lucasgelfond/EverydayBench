@@ -26,7 +26,9 @@ const ROUTES = [
 	['SEA', 'SFO'],
 	['BOS', 'ORD'],
 	['DEN', 'SEA'],
-	['AUS', 'DEN']
+	['AUS', 'DEN'],
+	// Last, so adding it reshuffled no other route's flights.
+	['BOS', 'KBY']
 ] as const;
 const HUBS = ['DEN', 'ORD'];
 const SLOTS = ['06:00', '07:40', '08:00', '09:15', '10:00', '11:30', '12:00', '13:45', '14:00', '15:30', '17:05', '18:20', '19:50', '21:10'];

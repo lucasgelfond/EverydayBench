@@ -4,7 +4,8 @@
 //
 // On disk a task is a folder, tasks/<family>/<name>/, in two parts:
 // - prompt.md: what the agent is given. Front matter (`start`: a site, or a site and path like "orbelle/account";
-//   `policy`; `known`), then the ticket in the owner's words. Reword it freely; grading doesn't read it.
+//   `policy`; `known`; `followups`, later texts from the owner), then the ticket in the owner's words. Reword it
+//   freely; grading doesn't read it.
 // - eval.json: the rest, deterministic: the world it starts in (`sites`, `initial`) and how it's graded (`evaluation`).
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -15,6 +16,18 @@ import { OWNER, siteName } from '../ctx.ts';
 
 const Call = z.object({ action: z.string(), args: z.record(z.string(), z.unknown()).default({}) });
 export type Call = z.infer<typeof Call>;
+
+// The owner texting again mid-run: what they say, and when, from what EverydayBench sees of the run. A harness polls the
+// control port for the ones due and delivers them as new messages (see control/app.ts).
+const When = z.union([
+	z.object({ afterSeconds: z.number().positive() }).strict(),
+	// The agent's browser loaded a page: "site:/path", matching that path and anything under it.
+	z.object({ onPath: z.string().regex(/^[a-z]+:\/\S*$/) }).strict(),
+	// The run wrote its first row to a table (a booking made, an order placed), on any site.
+	z.object({ afterWrite: z.string() }).strict()
+]);
+const Followup = z.object({ text: z.string().min(1), when: When });
+export type Followup = z.infer<typeof Followup>;
 
 const Assertion = z.object({
 	fn: z.string(),
@@ -46,6 +59,8 @@ export const Task = z.object({
 	policy: z.string().optional(),
 	// What the agent knows that the ticket doesn't say: logins, cards to type. A harness can put these in a vault.
 	known: z.record(z.string(), z.string()).default({}),
+	// Later messages from the owner, in order: each is due once its `when` holds and the one before was delivered.
+	followups: z.array(Followup).default([]),
 	possible: z.boolean().default(true),
 	// For splitting results (easy, medium, hard): how much reading, choosing and recovering the task takes.
 	difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
@@ -74,11 +89,11 @@ export const TASKS_DIR = resolve(process.env.EVERYDAYBENCH_TASKS ?? 'tasks');
 export function readPrompt(text: string) {
 	const m = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
 	if (!m) throw new Error('prompt.md starts with front matter between --- lines');
-	const front = (parseYaml(m[1]!) ?? {}) as { start?: string; policy?: string; known?: Record<string, string> };
+	const front = (parseYaml(m[1]!) ?? {}) as { start?: string; policy?: string; known?: Record<string, string>; followups?: unknown };
 	if (!front.start) throw new Error('prompt.md needs a start site');
 	const slash = front.start.indexOf('/');
 	const start = slash < 0 ? { site: front.start } : { site: front.start.slice(0, slash), path: front.start.slice(slash) };
-	return { ticket: m[2]!.trim(), start, policy: front.policy, known: front.known };
+	return { ticket: m[2]!.trim(), start, policy: front.policy, known: front.known, followups: front.followups };
 }
 
 // Every task under tasks/, by id: tasks/tickets/two-seats/ is tickets/two-seats, family tickets.
@@ -103,7 +118,8 @@ export function loadTasks(dir = TASKS_DIR): Map<string, Task> {
 }
 
 // What a harness hands its agent, whole: the ticket, the rules, where the browser is, and who the owner is (for a site
-// that asks). `known` isn't in it: a harness puts those in its vault, or adds them itself.
+// that asks). `known` isn't in it: a harness puts those in its vault, or adds them itself. Nor are `followups`: they
+// come later, from the control port.
 export const promptFor = (t: Task) =>
 	[t.ticket, t.policy && `Rules: ${t.policy}`, `${siteName(t.start.site)} is open in the browser.`, `If a site asks who I am: ${OWNER.name}, ${OWNER.email}.`]
 		.filter(Boolean)

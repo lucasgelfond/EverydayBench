@@ -1,0 +1,24 @@
+{
+	"difficulty": "medium",
+	"sites": ["skyhollow", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"evaluation": {
+		"reference": [
+			{
+				"action": "airline.book",
+				"args": {
+					"site": "skyhollow",
+					"legs": [{ "flight": "skyhollow-sh111-20260320", "fare": "economy" }],
+					"first": "Sam",
+					"last": "Rivera",
+					"birthDate": "1991-06-02",
+					"email": "sam@mailmoss.test",
+					"account": 1,
+					"payment": { "kind": "saved", "card": 1 }
+				}
+			}
+		],
+		"assertions": [{ "fn": "trip_reported", "args": { "site": "skyhollow" } }]
+	},
+	"tags": ["late-change", "followup", "one-way", "saved-card"]
+}

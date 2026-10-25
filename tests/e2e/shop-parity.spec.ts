@@ -8,7 +8,7 @@ import { SITES } from '../../src/lib/sites.ts';
 const counts: Record<string, number> = {};
 test.describe.configure({ mode: 'serial' });
 
-for (const site of ['kettlewick', 'parcelpine']) {
+for (const site of ['kettlewick', 'parcelpine', 'bramblecart']) {
 	test(`${site}: a guest buys two things`, async ({ page }) => {
 		const run = createRun({ scenario: 'tickets-v1', clock: '2026-03-14T10:00:00', id: `parity-${site}-${Date.now().toString(36)}` });
 		const w = SITES[site]!.skin.words;
@@ -39,8 +39,9 @@ for (const site of ['kettlewick', 'parcelpine']) {
 			await fill(page.getByLabel('Expires'), '08/28');
 			await fill(page.getByLabel('Security code'), '123');
 			await fill(page.getByLabel('Billing ZIP'), '10001');
-			// 2 × $18.50 + $13.99 = $50.99, free shipping, $4.08 tax.
-			await click(page.getByRole('button', { name: `${w.placeOrder} · $55.07` }));
+			// 2 × $18.50 + $13.99 = $50.99, free shipping, $4.08 tax; on Bramblecart, its pre-ticked $7.99 plan too (the
+			// same steps, a bigger total).
+			await click(page.getByRole('button', { name: `${w.placeOrder} · ${site === 'bramblecart' ? '$63.70' : '$55.07'}` }));
 			await expect(page.getByText('Order placed')).toBeVisible();
 			counts[site] = n;
 		} finally {
@@ -49,7 +50,7 @@ for (const site of ['kettlewick', 'parcelpine']) {
 	});
 }
 
-test('both stores took the same number of steps', () => {
-	expect(Object.keys(counts)).toHaveLength(2);
+test('every store took the same number of steps', () => {
+	expect(Object.keys(counts)).toHaveLength(3);
 	expect(new Set(Object.values(counts)).size, JSON.stringify(counts)).toBe(1);
 });

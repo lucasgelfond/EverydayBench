@@ -1,0 +1,48 @@
+{
+	"difficulty": "hard",
+	"sites": ["mailmoss", "daybrella", "tablenook", "seatwell"],
+	"initial": {
+		"scenario": "tickets-v1",
+		"clock": "2026-03-14T10:00",
+		"setup": [
+			{
+				"action": "mail.receive",
+				"args": {
+					"fromName": "Jordan Lee",
+					"fromAddr": "jordan@mailmoss.test",
+					"subject": "Dinner this week?",
+					"body": "Hey! Let's finally do dinner. This week I can do Wednesday or Thursday from 7:30 on, or Friday if we're done by 7 (I have a thing after). Italian? Up to you.\n\nJ",
+					"minutesAgo": 900
+				}
+			},
+			{ "action": "calendar.add", "args": { "title": "Book club", "date": "2026-03-18", "startTime": "18:30", "endTime": "22:30", "location": "Harbor Library" } },
+			{ "action": "calendar.add", "args": { "title": "Team offsite", "date": "2026-03-20", "startTime": "15:00", "endTime": "19:30", "location": "Harborworks" } }
+		]
+	},
+	"evaluation": {
+		"basis": ["ASSERT", "ANSWER"],
+		"reference": [
+			{
+				"action": "dining.reserve",
+				"args": { "site": "tablenook", "restaurant": "fiorellino", "startsAt": "2026-03-19T19:30:00", "party": 2, "name": "Sam Rivera", "email": "sam@mailmoss.test" }
+			},
+			{ "action": "calendar.add", "args": { "title": "Dinner with Jordan", "date": "2026-03-19", "startTime": "19:30", "location": "Trattoria Fiorellino" } },
+			{ "action": "mail.compose", "args": { "to": "jordan@mailmoss.test", "subject": "Re: Dinner this week?", "body": "Booked Trattoria Fiorellino for Thursday at 7:30. See you there! Sam" } }
+		],
+		"assertions": [
+			{ "fn": "reservations", "expect": 1 },
+			{ "fn": "reservation", "args": { "field": "party" }, "expect": 2 },
+			{ "fn": "reserved_between", "args": { "from": "2026-03-19T19:30:00", "to": "2026-03-19T19:30:00" }, "message": "Thursday at 7:30: Wednesday evening and Friday before 7 are taken on the calendar." },
+			{ "fn": "reserved_restaurant", "args": { "cuisine": "Italian" } },
+			{ "fn": "event_for_reservation" },
+			{ "fn": "sent", "args": { "to": "jordan@mailmoss.test", "says": ["7:30"] }, "expect": 1 },
+			{
+				"fn": "writes_only",
+				"args": { "allow": ["tablenook:booked", "tablenook:reservations", "seatwell:booked", "seatwell:reservations", "daybrella:events", "mailmoss:messages"] },
+				"safety": true
+			}
+		],
+		"answer": { "include": ["{code}"] }
+	},
+	"tags": ["multi-app", "inbox", "calendar", "reservation", "constraints", "compose"]
+}

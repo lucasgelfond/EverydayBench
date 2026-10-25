@@ -2,13 +2,15 @@
 // routes, data and actions) plus a skin: name, look and wording. Sibling sites in a family share every step and click;
 // only the skin differs, so a task can be run on each to separate "can't do the flow" from "can't read this layout".
 
-export type Family = 'tickets' | 'mail' | 'pay' | 'airline' | 'shop' | 'dining' | 'calendar' | 'lodging' | 'gym' | 'cloud' | 'gov' | 'portal';
+export type Family = 'tickets' | 'mail' | 'pay' | 'airline' | 'shop' | 'dining' | 'calendar' | 'lodging' | 'gym' | 'cloud' | 'gov' | 'portal' | 'expenses' | 'sheets' | 'bank';
 
 export interface Skin {
 	// CSS custom properties on <html>: --brand, --brand-ink, --bg, --surface, --ink, --muted, --radius, --font.
 	vars: Record<string, string>;
 	// Wording that differs between siblings ("Get tickets" vs "Buy tickets").
 	words: Partial<Record<Word, string>>;
+	// A hard twin's: the widgets real sites build in place of plain controls (hard-controls.ts), same fields underneath.
+	controls?: 'hard';
 	// Layout variants with the same controls and click count.
 	layout?: { header?: 'bar' | 'centered'; showtimes?: 'grid' | 'list'; screen?: 'top' | 'bottom'; flights?: 'cards' | 'table'; catalog?: 'grid' | 'list'; results?: 'grid' | 'list' };
 }
@@ -38,8 +40,28 @@ export interface Site {
 	// admission through a hosted checkout. Shop: a store ships its own catalog; a delivery app sells restaurants' menus.
 	// Dining: a reservations site lists many restaurants; a restaurant takes its own bookings on its own site.
 	kind?: 'chain' | 'aggregator' | 'arthouse' | 'store' | 'delivery' | 'reservations' | 'restaurant';
+	// A hard twin: the same data as this sibling (seeded as a copy of its database), with hard controls.
+	twin?: string;
 	skin: Skin;
+	// What a quirky sibling saves other than what was asked, telling the truth only on its confirmation: a date picker
+	// that keeps today's date the first time ('date-default'), a protection plan ticked at checkout ('addon'). Seeded as
+	// faults the site starts with (actions/faults.ts), so a task needn't arm them.
+	quirks?: Quirk[];
+	// What a site charges beyond the price, where it differs from its siblings'. Its flows don't change.
+	pricing?: Pricing;
 }
+
+// Drip pricing: the advertised price leaves out the fees (and may be cut, so it looks lowest); they're added on the last
+// step, before paying, and in the confirmation. Fees are per ticket (tickets) or per stay (lodging): `cents` flat, or
+// `rate` of the price before fees. Tax is on everything before it.
+export interface Pricing {
+	drip: true;
+	discountCents?: number;
+	fees: { label: string; cents?: number; rate?: number }[];
+	taxRate?: number;
+}
+
+export type Quirk = 'date-default' | 'addon';
 
 const font = (stack: string) => ({ '--font': stack });
 
@@ -90,6 +112,25 @@ export const SITES: Record<string, Site> = {
 			words: { buy: 'Showtimes & tickets', continue: 'Review order', purchase: 'Confirm and pay', findTheater: 'Pick a location', nowPlaying: 'Playing now', seatsHeading: 'Pick your seats', screen: 'SCREEN' },
 			// The screen drawn at the bottom: row A is still nearest the screen, so it's the bottom row.
 			layout: { header: 'bar', showtimes: 'grid', screen: 'bottom' }
+		}
+	},
+	seatsling: {
+		id: 'seatsling',
+		family: 'tickets',
+		kind: 'aggregator',
+		name: 'Seatsling',
+		tagline: 'Movie tickets for less',
+		skin: {
+			vars: { '--brand': '#7c3aed', '--brand-ink': '#ffffff', '--bg': '#faf7ff', '--surface': '#ffffff', '--ink': '#1e1033', '--muted': '#6b5a85', '--radius': '8px', ...font('ui-sans-serif, system-ui, sans-serif') },
+			words: { buy: 'Grab seats', continue: 'Continue', purchase: 'Pay now', findTheater: 'Theaters', nowPlaying: 'Now playing' }
+		},
+		pricing: {
+			drip: true,
+			discountCents: 100,
+			fees: [
+				{ label: 'Service fee', cents: 275 },
+				{ label: 'Facility fee', cents: 125 }
+			]
 		}
 	},
 	owlbox: {
@@ -163,6 +204,20 @@ export const SITES: Record<string, Site> = {
 			layout: { header: 'centered', catalog: 'list' }
 		}
 	},
+	// Kettlewick's sibling whose checkout ticks a protection plan and picks the account's oldest address.
+	bramblecart: {
+		id: 'bramblecart',
+		family: 'shop',
+		kind: 'store',
+		name: 'Bramblecart',
+		tagline: 'Home goods, gadgets and more, at your door.',
+		quirks: ['addon'],
+		skin: {
+			vars: { '--brand': '#6d28d9', '--brand-ink': '#ffffff', '--bg': '#f7f5fb', '--surface': '#ffffff', '--ink': '#1e1530', '--muted': '#6b6280', '--radius': '6px', ...font('ui-sans-serif, system-ui, sans-serif') },
+			words: { addToCart: 'Add to basket', cart: 'Basket', checkout: 'Checkout', placeOrder: 'Buy now' },
+			layout: { header: 'bar', catalog: 'grid' }
+		}
+	},
 	forkfly: {
 		id: 'forkfly',
 		family: 'shop',
@@ -198,6 +253,20 @@ export const SITES: Record<string, Site> = {
 			layout: { header: 'centered', results: 'grid' }
 		}
 	},
+	// A sibling of Tablenook whose date picker keeps today's date the first time.
+	plattertide: {
+		id: 'plattertide',
+		family: 'dining',
+		kind: 'reservations',
+		name: 'Plattertide',
+		tagline: 'Reserve a table in a tap.',
+		quirks: ['date-default'],
+		skin: {
+			vars: { '--brand': '#0e7490', '--brand-ink': '#ffffff', '--bg': '#f2fafb', '--surface': '#ffffff', '--ink': '#0b2329', '--muted': '#557078', '--radius': '12px', ...font('ui-sans-serif, system-ui, sans-serif') },
+			words: { findTable: 'Search', reserve: 'Reserve now' },
+			layout: { header: 'bar', results: 'list' }
+		}
+	},
 	vellutina: {
 		id: 'vellutina',
 		family: 'dining',
@@ -222,6 +291,21 @@ export const SITES: Record<string, Site> = {
 		name: 'Roostable',
 		tagline: 'Homes to stay in, wherever you’re headed',
 		skin: { vars: { '--brand': '#d9485f', '--brand-ink': '#ffffff', '--bg': '#ffffff', '--surface': '#ffffff', '--ink': '#222222', '--muted': '#717171', '--radius': '12px', ...font('ui-sans-serif, system-ui, sans-serif') }, words: {} }
+	},
+	nookery: {
+		id: 'nookery',
+		family: 'lodging',
+		name: 'Nookery',
+		tagline: 'Little places, low prices',
+		skin: { vars: { '--brand': '#0f766e', '--brand-ink': '#ffffff', '--bg': '#f7faf9', '--surface': '#ffffff', '--ink': '#132322', '--muted': '#5d6f6c', '--radius': '6px', ...font('"Avenir Next", "Segoe UI", sans-serif') }, words: {} },
+		pricing: {
+			drip: true,
+			fees: [
+				{ label: 'Service fee', rate: 0.15 },
+				{ label: 'Booking fee', cents: 2500 }
+			],
+			taxRate: 0.13
+		}
 	},
 	sweatlantis: {
 		id: 'sweatlantis',
@@ -257,6 +341,70 @@ export const SITES: Record<string, Site> = {
 		name: 'Fernwick Residents',
 		tagline: 'The Fernwick, 210 Larch St',
 		skin: { vars: { '--brand': '#3f6b4f', '--brand-ink': '#ffffff', '--bg': '#f5f4ef', '--surface': '#ffffff', '--ink': '#1f2a22', '--muted': '#68736b', '--radius': '10px', ...font('ui-sans-serif, system-ui, sans-serif') }, words: {} }
+	},
+	receiptacle: {
+		id: 'receiptacle',
+		family: 'expenses',
+		name: 'Receiptacle',
+		tagline: 'Expenses for Gullwing Studio',
+		skin: { vars: { '--brand': '#b4532a', '--brand-ink': '#ffffff', '--bg': '#faf6f1', '--surface': '#ffffff', '--ink': '#2b211b', '--muted': '#7a6a5f', '--radius': '6px', ...font('ui-sans-serif, system-ui, sans-serif') }, words: {} }
+	},
+	gridwhistle: {
+		id: 'gridwhistle',
+		family: 'sheets',
+		name: 'Gridwhistle',
+		tagline: 'Spreadsheets',
+		skin: { vars: { '--brand': '#188038', '--brand-ink': '#ffffff', '--bg': '#f8faf9', '--surface': '#ffffff', '--ink': '#1f2421', '--muted': '#5f6b64', '--radius': '6px', ...font('ui-sans-serif, system-ui, sans-serif') }, words: {} }
+	},
+	thriftwell: {
+		id: 'thriftwell',
+		family: 'bank',
+		name: 'Thriftwell Bank',
+		tagline: 'Banking for Kestrel Bay since 1924',
+		skin: { vars: { '--brand': '#123c69', '--brand-ink': '#ffffff', '--bg': '#f3f5f8', '--surface': '#ffffff', '--ink': '#14202e', '--muted': '#5b6878', '--radius': '4px', ...font('"Helvetica Neue", Arial, sans-serif') }, words: {} }
+	},
+	// Hard twins: a sibling's data and flows, with the controls real sites make hard (custom dropdowns, calendar-only
+	// dates, steppers and sliders, slide to confirm, icon-only buttons, a late banner, framed card fields).
+	zigzephyr: {
+		id: 'zigzephyr',
+		family: 'airline',
+		twin: 'skyhollow',
+		name: 'Zigzephyr Air',
+		tagline: 'Up, over and onward.',
+		skin: {
+			vars: { '--brand': '#b42318', '--brand-ink': '#ffffff', '--bg': '#fff7f5', '--surface': '#ffffff', '--ink': '#2a0d0a', '--muted': '#7d5a55', '--radius': '6px', ...font('ui-sans-serif, system-ui, sans-serif') },
+			words: { continue: 'Continue', purchase: 'Purchase trip', signIn: 'Sign in' },
+			layout: { header: 'bar', flights: 'cards' },
+			controls: 'hard'
+		}
+	},
+	knickwhistle: {
+		id: 'knickwhistle',
+		family: 'shop',
+		kind: 'store',
+		twin: 'kettlewick',
+		name: 'Knickwhistle',
+		tagline: 'Odds, ends and everyday things.',
+		skin: {
+			vars: { '--brand': '#4338ca', '--brand-ink': '#ffffff', '--bg': '#f5f5ff', '--surface': '#ffffff', '--ink': '#13123a', '--muted': '#5c5b80', '--radius': '10px', ...font('Verdana, Geneva, sans-serif') },
+			words: { addToCart: 'Add to Cart', cart: 'Cart', checkout: 'Proceed to checkout', placeOrder: 'Place your order' },
+			layout: { header: 'bar', catalog: 'grid' },
+			controls: 'hard'
+		}
+	},
+	tabletangle: {
+		id: 'tabletangle',
+		family: 'dining',
+		kind: 'reservations',
+		twin: 'tablenook',
+		name: 'Tabletangle',
+		tagline: 'Tables, tonight and later',
+		skin: {
+			vars: { '--brand': '#0f766e', '--brand-ink': '#ffffff', '--bg': '#f2fbf9', '--surface': '#ffffff', '--ink': '#082522', '--muted': '#4f706b', '--radius': '4px', ...font('"Gill Sans", "Trebuchet MS", sans-serif') },
+			words: { findTable: "Let's go", reserve: 'Complete reservation' },
+			layout: { header: 'bar', results: 'list' },
+			controls: 'hard'
+		}
 	}
 };
 

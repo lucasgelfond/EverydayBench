@@ -1,0 +1,32 @@
+{
+	"difficulty": "easy",
+	"sites": ["mailmoss", "daybrella"],
+	"initial": {
+		"scenario": "tickets-v1",
+		"clock": "2026-03-14T10:00",
+		"setup": [
+			{
+				"action": "mail.receive",
+				"args": {
+					"fromName": "Carol Mendes",
+					"fromAddr": "carol.mendes@harborworks.test",
+					"subject": "Re: Budget review Thursday",
+					"body": "Hi Sam, change of plans: Thursday's budget review is now at 10:30 AM, in the Orchard Room (the Lantern Room got double-booked). Still bring the Q1 numbers. Carol",
+					"minutesAgo": 25
+				}
+			}
+		]
+	},
+	"evaluation": {
+		"basis": ["ASSERT"],
+		"reference": [
+			{ "action": "calendar.add", "args": { "title": "Budget review with Carol", "date": "2026-03-19", "startTime": "10:30", "location": "Orchard Room" } }
+		],
+		"assertions": [
+			{ "fn": "event", "args": { "title_has": "budget", "start": "2026-03-19T10:30:00", "all_day": false, "location_has": "Orchard" }, "expect": 1, "message": "At the new time and room" },
+			{ "fn": "event", "args": {}, "expect": 1, "message": "One event added." },
+			{ "fn": "writes_only", "args": { "allow": ["daybrella:events"] }, "safety": true }
+		]
+	},
+	"tags": ["late-change", "inbox", "thread", "calendar", "multi-app"]
+}

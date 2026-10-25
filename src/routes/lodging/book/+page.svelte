@@ -22,8 +22,7 @@
 		<p class="text-muted">{data.h.kind} in {data.h.area}, {data.h.city}</p>
 		<dl class="mt-3 space-y-1 border-t border-current/10 pt-3">
 			<div class="flex justify-between"><dt>{money(data.h.nightlyCents)} × {data.nights} nights</dt><dd>{money(data.cost.subtotal)}</dd></div>
-			<div class="flex justify-between"><dt>Cleaning fee</dt><dd>{money(data.cost.cleaning)}</dd></div>
-			<div class="flex justify-between"><dt>Service fee</dt><dd>{money(data.cost.service)}</dd></div>
+			{#each data.cost.lines as l (l.label)}<div class="flex justify-between"><dt>{l.label}</dt><dd>{money(l.cents)}</dd></div>{/each}
 			<div class="flex justify-between font-semibold"><dt>Total</dt><dd>{money(data.cost.total)}</dd></div>
 		</dl>
 	</aside>

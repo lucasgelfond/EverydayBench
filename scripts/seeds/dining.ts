@@ -1,4 +1,4 @@
-// Dining's seed data: restaurants on the two reservations sites (most on one, some on both), Osteria Vellutina on its
+// Dining's seed data: restaurants on the reservations sites (most on one, some on two), Osteria Vellutina on its
 // own site, ten days of tables at every lunch and dinner time with many already booked, and a few fixed facts tasks
 // rely on (a sold-out lunch, a 6-top left at one time).
 
@@ -15,6 +15,8 @@ const DAYS = 10;
 
 type R = Omit<typeof restaurants.$inferInsert, 'reviews'> & { reviews: number; lunch: boolean; tables: number[]; on: string[] };
 const both = ['tablenook', 'seatwell'];
+// Plattertide lists a few of Tablenook's and Seatwell's restaurants.
+const PLATTERTIDE = ['sprigwood', 'olive-steps', 'pergola-minuta', 'copperline', 'saltmarsh', 'basil-lattice'];
 const SMALL = [2, 2, 2, 4, 4];
 const BIG = [...SMALL, 6];
 const GROUP = [...SMALL, 6, 8];
@@ -87,6 +89,8 @@ export function seedDining(make: Make) {
 		const db = make(site);
 		for (const r of RESTAURANTS) if (r.on.includes(site)) seedRestaurant(db, site, r);
 	}
+	const plattertide = make('plattertide');
+	for (const r of RESTAURANTS) if (PLATTERTIDE.includes(r.id)) seedRestaurant(plattertide, 'plattertide', r);
 	const tablenook = make('tablenook');
 	const seatwell = make('seatwell');
 	const vellutina = make('vellutina');
@@ -119,6 +123,9 @@ export function seedDining(make: Make) {
 		fix(db, 'ember-ledger', evening, 1, 'full');
 		fix(db, 'ember-ledger', at(saturday, '20:30'), 4, 'free');
 	}
+	// Sprigwood on Plattertide has a table for two at 7 PM tonight and on Wednesday the 18th: its date picker's default and
+	// the day asked for.
+	fix(plattertide, 'sprigwood', [...at(START, '19:00'), ...at(addDays(START, 4), '19:00')], 2, 'free');
 	// Thursday the 19th at Vellutina: a table for five or six at 7:30, none at 7 or 8.
 	const thursday = addDays(START, 5);
 	fix(vellutina, 'vellutina', at(thursday, '19:00', '20:00'), 5, 'full');

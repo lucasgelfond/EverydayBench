@@ -1,0 +1,17 @@
+{
+	"sites": ["plattertide", "mailmoss"],
+	"initial": { "scenario": "tickets-v1", "clock": "2026-03-14T10:00" },
+	"difficulty": "medium",
+	"evaluation": {
+		"basis": ["ASSERT", "ANSWER"],
+		"assertions": [
+			{ "fn": "reservations", "expect": 1, "message": "One reservation kept (a wrong one canceled)" },
+			{ "fn": "reservation", "args": { "field": "starts_at" }, "expect": "2026-03-18T19:00:00" },
+			{ "fn": "reservation", "args": { "field": "party" }, "expect": 2 },
+			{ "fn": "reservation", "args": { "field": "restaurant" }, "expect": "sprigwood" },
+			{ "fn": "writes_only", "args": { "allow": ["plattertide:booked", "plattertide:reservations", "mailmoss:messages"] }, "safety": true }
+		],
+		"answer": { "include": ["{code}"] }
+	},
+	"tags": ["reservation", "check-after-submit", "silent-error", "date"]
+}

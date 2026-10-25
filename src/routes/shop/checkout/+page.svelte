@@ -6,9 +6,12 @@
 	let address = $state((() => (data.addresses[0] ? `saved:${data.addresses[0].id}` : 'new'))());
 	let payment = $state((() => (data.cards[0] ? `saved:${data.cards[0].id}` : 'card'))());
 	let tip = $state((() => data.defaultTip)());
+	// Offered already ticked, as stores do.
+	let plan = $state(true);
+	const planCents = $derived(data.plan && plan ? data.plan.cents + data.plan.taxCents : 0);
 	const delivery = $derived(data.tips.length > 0);
 	const tipCents = $derived(Math.round((data.costs.subtotalCents * tip) / 100));
-	const total = $derived(data.costs.subtotalCents + data.costs.shippingCents + data.costs.serviceCents + data.costs.taxCents + (delivery ? tipCents : 0));
+	const total = $derived(data.costs.subtotalCents + data.costs.shippingCents + data.costs.serviceCents + data.costs.taxCents + (delivery ? tipCents : 0) + planCents);
 	const v: Record<string, string> = $derived(form?.values ?? {});
 </script>
 
@@ -55,6 +58,12 @@
 				</div>
 			</fieldset>
 		{/if}
+		{#if data.plan}
+			<label class="flex items-start gap-3 rounded-site p-3 text-sm ring-1 ring-current/20">
+				<input type="checkbox" name="plan" bind:checked={plan} class="mt-0.5" />
+				<span><strong>Add the {data.plan.name}</strong> for {money(data.plan.cents)}: repairs and replacement for two years.</span>
+			</label>
+		{/if}
 		{#if form?.error}<p class="font-semibold text-red-600" role="alert">{form.error}</p>{/if}
 		<button class="btn w-full">{data.words.placeOrder} · {money(total)}</button>
 	</form>
@@ -62,12 +71,13 @@
 		<h2 class="mb-2 font-semibold">{data.merchant ?? 'Order summary'}</h2>
 		<ul class="space-y-1">
 			{#each data.lines as l (l.id)}<li class="flex justify-between gap-3"><span>{l.quantity} × {l.name}</span><span>{money(l.priceCents * l.quantity)}</span></li>{/each}
+			{#if data.plan && plan}<li class="flex justify-between gap-3"><span>{data.plan.name}</span><span>{money(data.plan.cents)}</span></li>{/if}
 		</ul>
 		<dl class="mt-3 space-y-1 border-t border-current/10 pt-3">
-			<div class="flex justify-between"><dt>Subtotal</dt><dd>{money(data.costs.subtotalCents)}</dd></div>
+			<div class="flex justify-between"><dt>Subtotal</dt><dd>{money(data.costs.subtotalCents + (data.plan && plan ? data.plan.cents : 0))}</dd></div>
 			<div class="flex justify-between"><dt>{delivery ? 'Delivery fee' : 'Shipping'}</dt><dd>{data.costs.shippingCents ? money(data.costs.shippingCents) : 'Free'}</dd></div>
 			{#if delivery}<div class="flex justify-between"><dt>Service fee</dt><dd>{money(data.costs.serviceCents)}</dd></div>{/if}
-			<div class="flex justify-between"><dt>Estimated tax</dt><dd>{money(data.costs.taxCents)}</dd></div>
+			<div class="flex justify-between"><dt>Estimated tax</dt><dd>{money(data.costs.taxCents + (data.plan && plan ? data.plan.taxCents : 0))}</dd></div>
 			{#if delivery}<div class="flex justify-between"><dt>Tip</dt><dd>{money(tipCents)}</dd></div>{/if}
 			<div class="flex justify-between font-semibold"><dt>Total</dt><dd>{money(total)}</dd></div>
 		</dl>

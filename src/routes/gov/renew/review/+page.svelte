@@ -10,7 +10,8 @@
 		['Date issued', d.issuedOn],
 		['Email', d.email],
 		['Phone', d.phone],
-		['Mailing address', `${d.street}, ${d.city} ${d.zip}`]
+		['Mailing address', `${d.street}, ${d.city} ${d.zip}`],
+		['Processing', `${data.speed.name} (${data.speed.weeks})`]
 	]);
 </script>
 
@@ -22,5 +23,5 @@
 	</dl>
 	<p class="mt-4 text-sm"><a class="underline" href="/renew/details">Edit your details</a></p>
 </section>
-<p class="mt-6 max-w-2xl">Next, pay the {money(data.feeCents)} renewal fee. Your application is submitted when the fee is paid.</p>
+<p class="mt-6 max-w-2xl">Next, pay the {money(data.feeCents)} fee. Your application is submitted when the fee is paid.</p>
 <a class="btn mt-3" href="/renew/pay">Continue to payment</a>

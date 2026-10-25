@@ -12,6 +12,7 @@ export const AIRPORTS: Record<string, string> = {
 	EWR: 'Newark',
 	IND: 'Indianapolis',
 	JAX: 'Jacksonville',
+	KBY: 'Kestrel Bay',
 	MCO: 'Orlando',
 	MKE: 'Milwaukee',
 	ORD: 'Chicago O’Hare',

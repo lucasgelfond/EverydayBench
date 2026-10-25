@@ -12,4 +12,7 @@ import './actions/faults.ts';
 import './actions/cloud.ts';
 import './actions/gov.ts';
 import './actions/portal.ts';
+import './actions/sheets.ts';
 import './actions/inject.ts';
+import './actions/expenses.ts';
+import './evals/plans.ts';

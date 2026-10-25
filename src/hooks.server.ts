@@ -2,7 +2,8 @@ import { redirect } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { siteFromHost } from '#lib/sites.ts';
 import { ctxFor } from '#lib/server/ctx.ts';
-import { createRun, getRun } from '#lib/server/runs.ts';
+import { createRun, getRun, noteVisit, now } from '#lib/server/runs.ts';
+import { HARD_CONTROLS, withHardControls } from '#lib/server/hard-controls.ts';
 import { follow, withInjections } from '#lib/server/injections.ts';
 import { readSession } from '#lib/server/session.ts';
 import { armed } from '#lib/server/actions/faults.ts';
@@ -29,6 +30,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.ctx = ctxFor(run);
 	event.locals.site = site;
 	event.locals.account = readSession(cookies, run.id, site.id);
+	// Pages a task's follow-ups wait on (the owner texting "wait, make it 4" once the booking form is open).
+	if (run.watch && event.request.method === 'GET') noteVisit(run, site.id, url.pathname);
 	// A bot wall: past the home page, a challenge no agent can pass, with the status a real one sends. The home page
 	// navigates by full page loads, so the next page is the challenge itself rather than the app's error for a failed fetch.
 	const walled = (FAMILY_TABLES[site.family] as readonly string[]).includes('faults') && armed(event.locals.ctx, site.id, 'blocked');
@@ -57,7 +60,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 				url.pathname + url.search,
 				closed
 			);
-			const shown = walled ? page.replace('data-sveltekit-preload-data="hover"', 'data-sveltekit-reload') : page;
+			const plain = walled ? page.replace('data-sveltekit-preload-data="hover"', 'data-sveltekit-reload') : page;
+			const shown = site.skin.controls === 'hard' ? withHardControls(plain, HARD_CONTROLS, now(run).slice(0, 10)) : plain;
 			return hideAria ? withoutAria(shown) : shown;
 		}
 	});

@@ -12,5 +12,8 @@ import { seedGym } from './gym.ts';
 import { seedCloud } from './cloud.ts';
 import { seedGov } from './gov.ts';
 import { seedPortal } from './portal.ts';
+import { seedExpenses } from './expenses.ts';
+import { seedSheets } from './sheets.ts';
+import { seedBank } from './bank.ts';
 
-export const SEEDERS = [seedMail, seedTickets, seedOwlbox, seedTallypay, seedAirlines, seedShop, seedDining, seedCalendar, seedLodging, seedGym, seedCloud, seedGov, seedPortal];
+export const SEEDERS = [seedMail, seedTickets, seedOwlbox, seedTallypay, seedAirlines, seedShop, seedDining, seedCalendar, seedLodging, seedGym, seedCloud, seedGov, seedPortal, seedExpenses, seedSheets, seedBank];

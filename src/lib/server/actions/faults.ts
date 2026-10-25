@@ -1,13 +1,16 @@
 // Failures a task arms in its setup, so a run meets them on cue: a saved card that declines, a checkout that errors
 // after it charged, a payment service that's down the first few tries. Each kind happens `left` more times. A bot wall
 // ('blocked') is a state, not an event: while it's armed, every page but the home page is a challenge (hooks.server.ts).
+// Some save something other than what was asked, and say so only on the confirmation, so an agent has to check what it
+// got: a reservation's date that stays at today ('date-default'), a time that moves to the next free one ('slot-shift').
+// A checkout's add-on that's ticked until unticked ('addon') is a state too.
 
 import { eq, sql } from 'drizzle-orm';
 import { faults } from '../schema.ts';
 import type { Ctx } from '../ctx.ts';
 import { defineActions } from '../evals/registry.ts';
 
-export type Fault = 'decline' | 'error-after-charge' | 'payment-down' | 'blocked';
+export type Fault = 'decline' | 'error-after-charge' | 'payment-down' | 'blocked' | 'date-default' | 'slot-shift' | 'addon';
 
 export const arm = (ctx: Ctx, site: string, kind: Fault, times = 1) =>
 	ctx.db(site).insert(faults).values({ kind, left: times }).onConflictDoUpdate({ target: faults.kind, set: { left: times } }).run();

@@ -11,7 +11,7 @@ import { clock } from '../../src/lib/time.ts';
 const counts: Record<string, number> = {};
 test.describe.configure({ mode: 'serial' });
 
-for (const site of ['tablenook', 'seatwell']) {
+for (const site of ['tablenook', 'seatwell', 'plattertide']) {
 	test(`${site}: a table for two tomorrow evening`, async ({ page }) => {
 		const run = createRun({ scenario: 'tickets-v1', clock: '2026-03-14T10:00:00', id: `parity-${site}-${Date.now().toString(36)}` });
 		const ctx = ctxFor(run);
@@ -36,7 +36,7 @@ for (const site of ['tablenook', 'seatwell']) {
 	});
 }
 
-test('both sites took the same number of steps', () => {
-	expect(Object.keys(counts)).toHaveLength(2);
+test('every site took the same number of steps', () => {
+	expect(Object.keys(counts)).toHaveLength(3);
 	expect(new Set(Object.values(counts)).size, JSON.stringify(counts)).toBe(1);
 });
