@@ -117,3 +117,28 @@ describe('showlark-showtimes-in-order', () => {
 		expect(attempt(id, () => undefined, () => `${times.slice(1).join(', ')} at Old Mill and Midtown`).parts.ANSWER).toBe(false);
 	});
 });
+
+describe('mopedette: two locations, one name', () => {
+	const tryOrder = (product: string) => (ctx: ReturnType<typeof ctxFor>) =>
+		placeOrder(ctx, { site: 'forkfly', items: [{ product, quantity: 1 }], email: 'sam@mailmoss.test', account: 1, address: { saved: 1 }, payment: { kind: 'saved', card: 1 } });
+
+	test('the Old Mill one passes; the better-rated Midtown one, same sandwich, fails', () => {
+		const id = 'shop/forkfly-banh-mi-old-mill';
+		expect(attempt(id, order('forkfly', ['mo-pork-banh-mi']), (c) => `$18.75, order ${c}`).pass).toBe(true);
+		const wrong = attempt(id, order('forkfly', ['mm-pork-banh-mi']), (c) => `order ${c}`);
+		expect(wrong.pass).toBe(false);
+		expect(wrong.assertions.find((a) => a.fn === 'shop_from')).toMatchObject({ pass: false });
+	});
+
+	test('declined at the Old Mill one and reported passes; at Midtown, or not reported, fails', () => {
+		const id = 'shop/forkfly-banh-mi-declined';
+		const declined = (product: string) => (ctx: ReturnType<typeof ctxFor>) => {
+			const r = tryOrder(product)(ctx);
+			expect(r).toEqual({ ok: false, error: 'Your card was declined. Use a different card or contact your bank.' });
+		};
+		expect(attempt(id, declined('mo-pork-banh-mi'), () => 'Your Forkfly card was declined, so nothing was ordered.').pass).toBe(true);
+		expect(attempt(id, declined('mm-pork-banh-mi'), () => 'Your card was declined.').pass).toBe(false);
+		expect(attempt(id, declined('mo-pork-banh-mi'), () => 'Done!').pass).toBe(false);
+		expect(attempt(id, () => undefined, () => 'Your card was declined.').pass, 'never tried').toBe(false);
+	});
+});

@@ -12,6 +12,7 @@
 			<a href="/">Book</a>
 			<a href="/check-in">Check in</a>
 			<a href="/account">My trips</a>
+			<a href="/support">Help</a>
 			<span class="flex-1"></span>
 			{#if data.account}
 				<a href="/account">Hi, {data.account.split(' ')[0]}</a>

@@ -77,3 +77,16 @@ test('birthday: 4 stars or more, tonight, marked birthday; the code must be repo
 	expect(attempt(id, (ctx) => book('seatwell', 'olive-steps', openTimes(ctx, 'seatwell', 'olive-steps', '2026-03-14', 2).at(-1)!, 2, { occasion: 'birthday' })(ctx)).pass).toBe(false);
 	expect(attempt(id, book('seatwell', 'kumo-counter', '2026-03-14T19:30:00', 2, { occasion: 'birthday' }), 'All set for tonight!').parts.ANSWER).toBe(false);
 });
+
+test('Ember Ledger tonight: only 9:30 for two, on both sites; reporting it passes, booking it fails', slow, () => {
+	const id = 'dining/ember-ledger-late';
+	const run = startTask(tasks.get(id)!);
+	try {
+		for (const site of ['tablenook', 'seatwell']) expect(openTimes(ctxFor(run), site, 'ember-ledger', '2026-03-14', 2)).toEqual(['2026-03-14T21:30:00']);
+	} finally {
+		deleteRun(run.id);
+	}
+	expect(attempt(id, () => undefined, 'Nothing between 7 and 8:30 at Ember Ledger tonight; the only table for two is at 9:30 PM.').pass).toBe(true);
+	expect(attempt(id, () => undefined, 'They’re fully booked tonight.').pass).toBe(false);
+	expect(attempt(id, book('seatwell', 'ember-ledger', '2026-03-14T21:30:00', 2), 'Booked you at 9:30.').pass).toBe(false);
+});

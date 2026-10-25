@@ -35,3 +35,24 @@ test('Cloudpail: cancel past both retention offers, delete only web-staging, rea
 	await expect(page.getByText('stays active until Thursday, April 2')).toBeVisible();
 	expect(t.grade('Canceled. It stays active until Thursday, April 2; web-staging is deleted.').pass).toBe(true);
 });
+
+test('Two top-ups: a stale Cloudpail password reset from the email, $25 added there; Voltbarrow declines, nothing else tried', async ({ page }) => {
+	const t = begin(page, 'cloud/two-top-ups');
+	await t.go('cloudpail', '/account/sign-in');
+	await signIn(page, t, 'bucket-brigade-43');
+	await expect(page.getByRole('alert')).toBeVisible();
+	await resetAndSignIn(page, t, 'cloudpail', /Reset your Cloudpail password/, 'ember-lantern-55');
+	await t.click(page.getByRole('link', { name: 'Billing' }));
+	await t.click(page.getByLabel('$25.00'));
+	await t.click(page.getByRole('button', { name: 'Add credit' }));
+	await expect(page.getByText('$29.50')).toBeVisible();
+	await t.go('voltbarrow', '/account/sign-in');
+	await signIn(page, t, 'spark-gap-1912');
+	await t.click(page.getByRole('link', { name: 'Billing' }));
+	await t.click(page.getByLabel('$50.00'));
+	await t.click(page.getByRole('button', { name: 'Add credit' }));
+	await expect(page.getByRole('alert')).toContainText('Visa ending in 1881 was declined');
+	await expect(page.getByText('$12.75', { exact: true })).toBeVisible();
+	expect(t.grade('Cloudpail is now $29.50. Voltbarrow declined the Visa on file, so its balance is still $12.75.').pass).toBe(true);
+});
+

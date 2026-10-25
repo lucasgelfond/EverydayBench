@@ -77,3 +77,19 @@ export const parseLeg = (v: string | null) => {
 	const [flight, fare] = (v ?? '').split('.');
 	return flight && fare && isFare(fare) ? { flight, fare } : undefined;
 };
+
+// Premium Economy and Business refund to the card; Basic and Economy don't, but can be canceled for travel credit,
+// good for a year.
+export const refundable = (fares: Fare[]) => fares.every((f) => f === 'premium' || f === 'business');
+export const CREDIT_MONTHS = 12;
+
+// The support chat's choices: what it helps with (only Wi-Fi, for now) and what went wrong with it.
+export const CHAT_TOPICS = { wifi: 'Wi-Fi or entertainment', bags: 'Bags', change: 'Changing a trip' } as const;
+export const WIFI_PROBLEMS = { never: 'I paid for Wi-Fi and it never connected', slow: 'It was too slow to use', twice: 'I was charged twice' } as const;
+export type WifiProblem = keyof typeof WIFI_PROBLEMS;
+
+// "(617) 555-0143" from any way of writing a US number, or undefined.
+export function phoneNumber(v: string) {
+	const d = v.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+	return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : undefined;
+}

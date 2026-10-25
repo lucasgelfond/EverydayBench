@@ -9,7 +9,7 @@ export const load = ({ locals, cookies, url }) => {
 	return {
 		added: productById(locals.ctx, site.id, url.searchParams.get('added') ?? '')?.name,
 		lines: p.lines.map(({ product, quantity }) => ({ id: product.id, name: product.name, priceCents: product.priceCents, inStock: product.inStock, quantity })),
-		merchant: p.merchant && { id: p.merchant.id, name: p.merchant.name },
+		merchant: p.merchant && { id: p.merchant.id, name: p.merchant.name, area: p.merchant.area },
 		subtotalCents: p.subtotalCents,
 		max: MAX_QUANTITY
 	};

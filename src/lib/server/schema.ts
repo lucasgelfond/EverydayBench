@@ -219,11 +219,43 @@ export const checkins = sqliteTable(
 	(t) => [primaryKey({ columns: [t.trip, t.flight] })]
 );
 
+// What a trip can come to after booking. Basic and Economy fares are nonrefundable: a refund request for one is denied,
+// and canceling for travel credit is the way out (it can't be undone). Premium Economy and Business refund to the card.
+export const refunds = sqliteTable('refunds', {
+	// The request's reference, emailed with the decision.
+	code: text('code').primaryKey(),
+	trip: text('trip').notNull(),
+	status: text('status', { enum: ['approved', 'denied'] }).notNull(),
+	amountCents: integer('amount_cents').notNull(),
+	createdAt: text('created_at').notNull()
+});
+
+export const travelCredits = sqliteTable('travel_credits', {
+	code: text('code').primaryKey(),
+	// The trip canceled for it.
+	trip: text('trip').notNull().unique(),
+	amountCents: integer('amount_cents').notNull(),
+	expiresOn: text('expires_on').notNull(),
+	createdAt: text('created_at').notNull()
+});
+
+// Calls the support chat promised: the flight, what went wrong, the number to call. The chat gives no case number.
+export const callbacks = sqliteTable('callbacks', {
+	trip: text('trip').notNull(),
+	flight: text('flight').notNull(),
+	problem: text('problem').notNull(),
+	phone: text('phone').notNull(),
+	createdAt: text('created_at').notNull()
+});
+
 // Shop: stores and the delivery app. A store's products have no merchant; a delivery app's belong to a restaurant.
 export const merchants = sqliteTable('merchants', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	cuisine: text('cuisine').notNull(),
+	// Where it is: chains have a location per neighborhood, under the same name.
+	area: text('area').notNull(),
+	address: text('address').notNull(),
 	// Stars times ten (4.6 -> 46), and how many reviews.
 	rating: integer('rating').notNull(),
 	reviews: integer('reviews').notNull(),
@@ -277,6 +309,17 @@ export const shopOrders = sqliteTable('shop_orders', {
 	totalCents: integer('total_cents').notNull(),
 	cardLast4: text('card_last4').notNull(),
 	payment: text('payment', { enum: ['saved', 'typed'] }).notNull(),
+	createdAt: text('created_at').notNull()
+});
+
+// Checkouts whose card was declined: a shop keeps them (as real ones show a failed payment), so a grader can see what
+// the agent tried to buy, and where, even though nothing was ordered.
+export const failedPayments = sqliteTable('failed_payments', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	account: integer('account'),
+	merchant: text('merchant'),
+	totalCents: integer('total_cents').notNull(),
+	cardLast4: text('card_last4').notNull(),
 	createdAt: text('created_at').notNull()
 });
 
@@ -467,20 +510,20 @@ export const requests = sqliteTable('requests', {
 
 export const residents = sqliteTable('residents', { account: integer('account').primaryKey(), unit: text('unit').notNull() });
 
-export const TABLES = { flights, seatsTaken, trips, legs, checkins, films, theaters, auditoriums, showtimes, taken, listings, accounts, cards, orders, resets, messages, sessions, charges, express, codes, merchants, products, addresses, shop_orders: shopOrders, restaurants, slots, booked, reservations, contacts, events, homes, nights, wishlist, stays, locations, classes, bookings, faults, subscriptions, servers, credits, applications, requests, residents };
+export const TABLES = { flights, seatsTaken, trips, legs, checkins, refunds, travelCredits, callbacks, films, theaters, auditoriums, showtimes, taken, listings, accounts, cards, orders, resets, messages, sessions, charges, express, codes, merchants, products, addresses, shop_orders: shopOrders, failed_payments: failedPayments, restaurants, slots, booked, reservations, contacts, events, homes, nights, wishlist, stays, locations, classes, bookings, faults, subscriptions, servers, credits, applications, requests, residents };
 
 // Which tables each family's databases have.
 export const FAMILY_TABLES = {
 	tickets: ['films', 'theaters', 'auditoriums', 'showtimes', 'taken', 'listings', 'accounts', 'cards', 'orders', 'resets', 'faults'],
 	mail: ['messages', 'contacts'],
 	pay: ['sessions', 'charges', 'express', 'codes'],
-	airline: ['flights', 'seatsTaken', 'trips', 'legs', 'checkins', 'accounts', 'cards'],
-	shop: ['merchants', 'products', 'accounts', 'cards', 'addresses', 'shop_orders'],
+	airline: ['flights', 'seatsTaken', 'trips', 'legs', 'checkins', 'refunds', 'travelCredits', 'callbacks', 'accounts', 'cards'],
+	shop: ['merchants', 'products', 'accounts', 'cards', 'addresses', 'shop_orders', 'failed_payments', 'faults'],
 	dining: ['restaurants', 'slots', 'booked', 'reservations'],
 	calendar: ['events'],
 	lodging: ['homes', 'nights', 'wishlist', 'stays', 'accounts', 'cards'],
 	gym: ['locations', 'classes', 'bookings', 'accounts'],
-	cloud: ['accounts', 'cards', 'resets', 'subscriptions', 'servers', 'credits'],
+	cloud: ['accounts', 'cards', 'resets', 'subscriptions', 'servers', 'credits', 'faults'],
 	gov: ['applications', 'faults'],
 	portal: ['accounts', 'resets', 'residents', 'requests']
 } as const;

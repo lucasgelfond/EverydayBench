@@ -105,6 +105,11 @@ export function seedDining(make: Make) {
 	fix(seatwell, 'basil-lattice', at(START, '19:00', '19:30'), 2, 'free');
 	fix(seatwell, 'petit-sillon', at(START, '19:30'), 2, 'free');
 	fix(seatwell, 'pergola-minuta', at(START, '18:00', '18:30', '19:00', '19:30', '20:00'), 2, 'free');
+	// Tonight at Ember Ledger, on both sites: nothing from 5 to 9 or at 10; 9:30 is the only time a party of two can book.
+	for (const db of [tablenook, seatwell]) {
+		fix(db, 'ember-ledger', at(START, '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '22:00'), 1, 'full');
+		fix(db, 'ember-ledger', at(START, '21:30'), 2, 'free');
+	}
 	// Thursday the 19th at Vellutina: a table for five or six at 7:30, none at 7 or 8.
 	const thursday = addDays(START, 5);
 	fix(vellutina, 'vellutina', at(thursday, '19:00', '20:00'), 5, 'full');

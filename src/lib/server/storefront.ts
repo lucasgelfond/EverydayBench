@@ -25,7 +25,7 @@ export const categoriesOf = (ctx: Ctx, site: string) =>
 
 export const productById = (ctx: Ctx, site: string, id: string) => ctx.db(site).select().from(products).where(eq(products.id, id)).get();
 
-// Restaurants, best rated first; with words, those whose name, cuisine or a dish matches.
+// Restaurants, best rated first; with words, those whose name, cuisine, neighborhood or a dish matches.
 export function restaurants(ctx: Ctx, site: string, q = '') {
 	const db = ctx.db(site);
 	const all = db.select().from(merchants).orderBy(desc(merchants.rating), asc(merchants.name)).all();
@@ -33,7 +33,7 @@ export function restaurants(ctx: Ctx, site: string, q = '') {
 	if (!words.length) return all;
 	const dishes = db.select().from(products).all();
 	return all.filter((m) => {
-		const text = [m.name, m.cuisine, ...dishes.filter((d) => d.merchant === m.id).map((d) => d.name)].join(' ').toLowerCase();
+		const text = [m.name, m.cuisine, m.area, ...dishes.filter((d) => d.merchant === m.id).map((d) => d.name)].join(' ').toLowerCase();
 		return words.every((w) => text.includes(w));
 	});
 }

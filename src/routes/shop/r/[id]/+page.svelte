@@ -6,6 +6,7 @@
 
 <a href="/" class="text-sm text-muted hover:underline">← All restaurants</a>
 <h1 class="mt-2 text-3xl font-bold">{m.name}</h1>
+<p class="mt-1">{m.area} · {m.address}</p>
 <p class="mb-4 text-muted">{m.cuisine} · {(m.rating / 10).toFixed(1)} ★ ({m.reviews.toLocaleString('en-US')}) · {m.etaMinutes} min · {money(m.deliveryFeeCents)} delivery fee</p>
 {#if data.added}
 	<p role="status" class="card mb-4 flex flex-wrap items-center justify-between gap-3">

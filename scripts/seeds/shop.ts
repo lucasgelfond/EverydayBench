@@ -40,30 +40,41 @@ const CATALOG: P[] = [
 	['cutting-board', 'Maple Cutting Board', 'Kitchen Tools', 3800, 47, 1198, 'An edge-grain maple board with a juice groove.']
 ];
 
-type M = [id: string, name: string, cuisine: string, rating: number, reviews: number, deliveryFeeCents: number, etaMinutes: number, menu: [string, string, string, number, string][]];
+type M = [id: string, name: string, cuisine: string, area: string, address: string, rating: number, reviews: number, deliveryFeeCents: number, etaMinutes: number, menu: [string, string, string, number, string][]];
 
 // The best-rated rotisserie place's sandwich goes over $30 with its fees and the default tip; the sandwich shop's
-// doesn't.
+// doesn't. Mopedette has two locations under one name, with near-identical menus: the Midtown one is better rated, so it
+// comes first when the owner wants the Old Mill one.
 const RESTAURANTS: M[] = [
-	['ember-rotisserie', 'Ember Rotisserie', 'Rotisserie', 47, 1840, 549, 35, [
+	['ember-rotisserie', 'Ember Rotisserie', 'Rotisserie', 'Midtown', '210 Grand St', 47, 1840, 549, 35, [
 		['ember-chicken-sandwich', 'Rotisserie Chicken Sandwich', 'Sandwiches', 1895, 'Pulled rotisserie chicken, garlic aioli, pickled onions and arugula on a toasted ciabatta.'],
 		['ember-meal', 'Rotisserie Chicken Meal', 'Meals', 2295, 'A quarter chicken with two sides and a drink.'],
 		['ember-half', 'Half Rotisserie Chicken', 'Meals', 1650, 'Half a chicken, herb-rubbed and slow roasted.'],
 		['ember-fries', 'Herb Fries', 'Sides', 595, 'Crisp fries with rosemary salt.'],
 		['ember-wrap', 'Chicken Caesar Wrap', 'Sandwiches', 1450, 'Rotisserie chicken, romaine, parmesan and Caesar dressing.']
 	]],
-	['coop-and-crumb', 'Coop & Crumb', 'Sandwiches', 44, 960, 299, 25, [
+	['coop-and-crumb', 'Coop & Crumb', 'Sandwiches', 'Northside', '77 Alder Ave', 44, 960, 299, 25, [
 		['coop-chicken-sandwich', 'Rotisserie Chicken Sandwich', 'Sandwiches', 1350, 'Rotisserie chicken, provolone, tomato and herb mayo on sourdough.'],
 		['coop-turkey-club', 'Turkey Club', 'Sandwiches', 1295, 'Roast turkey, bacon, lettuce and tomato on toasted white.'],
 		['coop-soup', 'Tomato Soup', 'Soups', 650, 'Roasted tomato soup, 12 oz.'],
 		['coop-cookie', 'Brown Butter Chocolate Chip Cookie', 'Desserts', 325, 'Baked every morning.']
 	]],
-	['basil-and-broth', 'Basil & Broth', 'Vietnamese', 46, 1215, 399, 30, [
+	['basil-and-broth', 'Basil & Broth', 'Vietnamese', 'Eastgate', '15 Eastgate Blvd', 46, 1215, 399, 30, [
 		['bb-banh-mi', 'Lemongrass Chicken Banh Mi', 'Sandwiches', 1195, 'Grilled lemongrass chicken, pickled carrot and daikon, cilantro, jalapeño.'],
 		['bb-pho', 'Chicken Pho', 'Soups', 1550, 'Rice noodles in a slow-simmered chicken broth with herbs.'],
 		['bb-rolls', 'Fresh Spring Rolls', 'Starters', 795, 'Shrimp, vermicelli and herbs in rice paper, with peanut sauce.']
 	]],
-	['crustwell', 'Crustwell Pizza', 'Pizza', 43, 2410, 199, 40, [
+	['mopedette-midtown', 'Mopedette', 'Vietnamese', 'Midtown', '48 Grand St', 47, 2306, 349, 25, [
+		['mm-pork-banh-mi', 'Grilled Pork Banh Mi', 'Sandwiches', 1150, 'Lemongrass pork, pâté, pickled carrot and daikon, cilantro and jalapeño on a crackly roll.'],
+		['mm-tofu-banh-mi', 'Crispy Tofu Banh Mi', 'Sandwiches', 1050, 'Five-spice tofu, pickles, cucumber and sriracha mayo.'],
+		['mm-iced-coffee', 'Vietnamese Iced Coffee', 'Drinks', 550, 'Dark roast over condensed milk.']
+	]],
+	['mopedette-old-mill', 'Mopedette', 'Vietnamese', 'Old Mill', '9 Millrace Ln', 44, 688, 299, 30, [
+		['mo-pork-banh-mi', 'Grilled Pork Banh Mi', 'Sandwiches', 1075, 'Lemongrass pork, pâté, pickled carrot and daikon, cilantro and jalapeño on a crackly roll.'],
+		['mo-tofu-banh-mi', 'Crispy Tofu Banh Mi', 'Sandwiches', 995, 'Five-spice tofu, pickles, cucumber and sriracha mayo.'],
+		['mo-iced-coffee', 'Vietnamese Iced Coffee', 'Drinks', 500, 'Dark roast over condensed milk.']
+	]],
+	['crustwell', 'Crustwell Pizza', 'Pizza', 'Riverside', '6 River Walk', 43, 2410, 199, 40, [
 		['cw-margherita', 'Margherita Pizza, 14"', 'Pizza', 1800, 'Tomato, mozzarella and basil.'],
 		['cw-chicken-pesto', 'Chicken Pesto Pizza, 14"', 'Pizza', 2150, 'Roast chicken, pesto, mozzarella and cherry tomatoes.'],
 		['cw-knots', 'Garlic Knots (6)', 'Sides', 600, 'With marinara.']
@@ -85,8 +96,8 @@ export function seedShop(make: Make) {
 		seedAccount(db, password, { brand: 'Visa', last4: '4242', expMonth: 8, expYear: 2028 });
 	}
 	const forkfly = make('forkfly');
-	for (const [id, name, cuisine, rating, reviews, deliveryFeeCents, etaMinutes, menu] of RESTAURANTS) {
-		forkfly.insert(merchants).values({ id, name, cuisine, rating, reviews, deliveryFeeCents, etaMinutes }).run();
+	for (const [id, name, cuisine, area, address, rating, reviews, deliveryFeeCents, etaMinutes, menu] of RESTAURANTS) {
+		forkfly.insert(merchants).values({ id, name, cuisine, area, address, rating, reviews, deliveryFeeCents, etaMinutes }).run();
 		forkfly.insert(products).values(menu.map(([pid, pname, category, price, description]) => row([pid, pname, category, price, rating, reviews, description], id))).run();
 	}
 	seedAccount(forkfly, 'extra-crispy-77', { brand: 'Mastercard', last4: '4444', expMonth: 11, expYear: 2027 });
