@@ -20,4 +20,6 @@ I wanted a way to test when I'd made changes that caused regressions or helped m
 - The sites are hosted on one server on different hostnames (i.e. `showlark.everydaybench.test`, `lumiscope.everydaybench.test`)
 - There's many near-dupes of sites that have harder layouts or input elements 
 
+![A few of the sites](public/sites.gif)
+
 My plan is to keep updating this (and maybe release it as a v0) once I've found more challenging tasks frontier models don't quite saturate. Admittedly it becomes a bit tricky to prevent this repo from being visited / consumed, so the onus would be on the user to verify none of this ended up in the eval runs. 
