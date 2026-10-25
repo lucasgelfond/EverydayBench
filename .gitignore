@@ -30,3 +30,5 @@ PLAN.md
 /test-results
 /playwright-report
 /.test
+
+.vscode
