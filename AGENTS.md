@@ -15,6 +15,8 @@ file is what an agent (or a person) changing the code needs to know.
 - `src/lib/server/injections.ts` — prompt injections (an email, a listing's text, a pop-up, hidden text), each in a style
   that works on agents and aimed at a goal graders can see; tasks deliver them with `inject.*` setup actions.
 - `src/routes/<family>/` — pages. `src/lib/ui/` — shared components (seat map, date strip, card fields, search).
+- `adapters/` — the tasks in other harnesses (BrowserGym, Inspect), each a thin layer over the control port; keep
+  `adapters/inspect/everydaybench_inspect/compose.yaml`'s aliases in step with `SITES`.
 - `scripts/seed.ts` — builds `seeds/<scenario>/*.db` from code. `control/` — the harness API (Hono). `server.ts` —
   production entry. `tasks/` — tasks (`prompt.md` + `eval.json` each). `tests/unit` (Vitest), `tests/e2e` (Playwright).
 

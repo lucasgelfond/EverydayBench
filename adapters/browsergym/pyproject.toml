@@ -1,0 +1,10 @@
+[project]
+name = "everydaybench-browsergym"
+version = "0.1.0"
+description = "EverydayBench's tasks as BrowserGym environments"
+requires-python = ">=3.10"
+dependencies = ["browsergym-core>=0.14"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

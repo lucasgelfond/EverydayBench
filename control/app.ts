@@ -2,7 +2,10 @@
 // never reaches, so an agent can't read a task's answers or reset its world.
 //   GET  /tasks                    the tasks
 //   GET  /tasks/<id>               one task, as written
-//   POST /runs        {task, id?, conditions?}  start a run (conditions: {latencyMs, hideAria}): { run, start (URL with the run token), prompt, known, ticket, policy, followups (how many) }
+//   POST /runs        {task, id?, conditions?, known?, open?}  start a run (conditions: {latencyMs, hideAria}; known: true
+//                     writes the task's logins and card into the prompt, for a harness without a vault; open: false has the
+//                     prompt name the start page, for a harness that can't open it first): { run, start (URL with the run
+//                     token), prompt, known, ticket, policy, followups (how many) }
 //   GET  /runs/<id>/followups      the owner's later messages now due, each handed out once: [{ id, text }]. Poll it
 //                                  while the agent works (every few seconds) and pass each on as a new message.
 //   POST /runs/<id>/grade {report} grade it
@@ -28,12 +31,12 @@ export const control = new Hono()
 		return t ? c.json(t) : c.json({ error: 'no such task' }, 404);
 	})
 	.post('/runs', async (c) => {
-		const body = await c.req.json<{ task: string; id?: string; conditions?: Conditions }>();
+		const body = await c.req.json<{ task: string; id?: string; conditions?: Conditions; known?: boolean; open?: boolean }>();
 		const t = task(body.task);
 		if (!t) return c.json({ error: `no task ${body.task}` }, 404);
 		const run = startTask(t, body.id, body.conditions);
 		const start = `${ORIGIN.replace('{site}', t.start.site)}${t.start.path}${t.start.path.includes('?') ? '&' : '?'}everydaybench_run=${run.id}`;
-		return c.json({ run: run.id, start, prompt: promptFor(t), ticket: t.ticket, policy: t.policy, known: t.known, sites: t.sites, followups: t.followups.length }, 201);
+		return c.json({ run: run.id, start, prompt: promptFor(t, { known: body.known, start: body.open === false ? start : undefined }), ticket: t.ticket, policy: t.policy, known: t.known, sites: t.sites, followups: t.followups.length }, 201);
 	})
 	.post('/runs/:id/grade', async (c) => {
 		const run = getRun(c.req.param('id'));

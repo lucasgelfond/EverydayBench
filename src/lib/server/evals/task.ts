@@ -118,9 +118,22 @@ export function loadTasks(dir = TASKS_DIR): Map<string, Task> {
 }
 
 // What a harness hands its agent, whole: the ticket, the rules, where the browser is, and who the owner is (for a site
-// that asks). `known` isn't in it: a harness puts those in its vault, or adds them itself. Nor are `followups`: they
-// come later, from the control port.
-export const promptFor = (t: Task) =>
-	[t.ticket, t.policy && `Rules: ${t.policy}`, `${siteName(t.start.site)} is open in the browser.`, `If a site asks who I am: ${OWNER.name}, ${OWNER.email}.`]
+// that asks). `known` isn't in it unless asked for: a harness with a vault puts those there; one without (BrowserGym,
+// Inspect) gets them written in. Nor are `followups`: they come later, from the control port.
+// `start`: for a harness whose browser starts empty, the page to start on, in place of saying it's open.
+export const promptFor = (t: Task, { known = false, start }: { known?: boolean; start?: string } = {}) =>
+	[t.ticket, t.policy && `Rules: ${t.policy}`, start ? `Start at ${start} (${siteName(t.start.site)}).` : `${siteName(t.start.site)} is open in the browser.`, `If a site asks who I am: ${OWNER.name}, ${OWNER.email}.`, known && knownText(t.known)]
 		.filter(Boolean)
 		.join('\n\n');
+
+// `known` as the owner would write it: "lumiscope_email", "lumiscope_password" -> "Lumiscope Cinemas: email …, password …".
+export function knownText(known: Record<string, string>) {
+	const by = new Map<string, string[]>();
+	for (const [key, value] of Object.entries(known)) {
+		const [owner, ...field] = key.split('_');
+		by.set(owner!, [...(by.get(owner!) ?? []), `${field.join(' ') || key} ${value}`]);
+	}
+	if (!by.size) return '';
+	const label = (owner: string) => (owner === 'card' ? 'My card' : `${siteName(owner)} login`);
+	return `What you may need:\n${[...by].map(([owner, fields]) => `- ${label(owner)}: ${fields.join(', ')}`).join('\n')}`;
+}
